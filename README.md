@@ -19,6 +19,8 @@ partiflow validate inference/klk2 --plan
 
 The environment recipe includes an editable package installation. Weights and training datasets are provisioned separately. The [resource guide](docs/resources.md) explains local imports, configured downloads, and separate package/configuration and model roots. The complete command and task guides start at [docs/README.md](docs/README.md).
 
+For Codex-assisted development, use the repository [partiflow-peptide skill](.agents/skills/partiflow-peptide/SKILL.md), covering the CLI, training, structure workflows, and focused validation.
+
 | Task family | Fixed binder information | Generated result |
 | --- | --- | --- |
 | [denovo](docs/tasks/denovo.md) | Length schedule and optional conditions | Sequence and all-atom structure |

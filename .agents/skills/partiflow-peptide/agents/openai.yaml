@@ -1,0 +1,7 @@
+interface:
+  display_name: "PartiFlow Peptide"
+  short_description: "Maintain PartiFlow official workflows and training"
+  default_prompt: "Use $partiflow-peptide to maintain the selected PartiFlow official checkout and verify the requested change."
+
+policy:
+  allow_implicit_invocation: true
