@@ -1,0 +1,385 @@
+# ======================================================================
+# Some Demo Cases for KLK2 Design
+# ======================================================================
+
+klk2_freegen:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2.pdb
+  is_complex: false
+  pep_chain: null
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: {nres: null, min_len: 11, max_len: 20, step_len: 1}
+  sample_num: 1
+
+klk2_hotspot:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: A124-125/A153/A155-156/A177-181
+  motif_cfg: null
+  lens_cfg: {nres: null, min_len: 11, max_len: 20, step_len: 1}
+  sample_num: 1
+
+klk2_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: 2-8/L6-11/2-8, min_len: 12, max_len: 20}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 1
+
+klk2_docking:
+  task_type: docking
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: null
+  lens_cfg: null
+  sample_num: 1
+
+klk2_invfold:
+  task_type: inv_folding
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: null
+  lens_cfg: null
+  sample_num: 1
+
+klk2_packing:
+  task_type: packing
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: null
+  lens_cfg: null
+  sample_num: 1
+
+# ======================================================================
+# Denovo Cyclization Demo
+# ======================================================================
+
+klk2_denovo_cyclic:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: null, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: 11, max_len: 15, step_len: 1}
+  sampler: head_to_tail
+  sample_num: 1
+
+klk2_denovo_disulfide:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: null, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: 11, max_len: 15, step_len: 1}
+  sampler: disulfide
+  sample_num: 1
+
+klk2_denovo_isopep:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: null, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: 11, max_len: 15, step_len: 1}
+  sampler: isopep
+  sample_num: 1
+
+klk2_denovo_alkane_staple:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: null, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: 11, max_len: 15, step_len: 1}
+  sampler: alkane_staple
+  sample_num: 1
+
+klk2_denovo_alkene_staple:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: null, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: 11, max_len: 15, step_len: 1}
+  sampler: alkene_staple
+  sample_num: 1
+
+klk2_denovo_bicyclic:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: null
+  lens_cfg: {nres: null, min_len: 21, max_len: 25, step_len: 1}
+  sampler: bicyclic
+  sample_num: 1
+
+
+# ======================================================================
+# Motif Cyclization Demo
+# ======================================================================
+
+klk2_motif_cyclic:
+  task_type: motif
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: 6-8/L6-11/6-8, min_len: 18, max_len: 22}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sampler: head_to_tail
+  sample_num: 5
+
+klk2_motif_disulfide:
+  task_type: motif
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: 6-8/L6-11/6-8, min_len: 18, max_len: 22}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sampler: disulfide
+  sample_num: 5
+
+klk2_motif_isopep:
+  task_type: motif
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: 6-8/L6-11/6-8, min_len: 18, max_len: 22}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sampler: isopep
+  sample_num: 5
+
+klk2_motif_alkane_staple:
+  task_type: motif
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: 6-8/L6-11/6-8, min_len: 18, max_len: 22}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sampler: alkane_staple
+  sample_num: 5
+
+klk2_motif_alkene_staple:
+  task_type: motif
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: 6-8/L6-11/6-8, min_len: 18, max_len: 22}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sampler: alkene_staple
+  sample_num: 5
+
+klk2_motif_bicyclic:
+  task_type: motif
+  pdb_path: ./pdbs/design/klk2/klk2_motif.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: 6-8/L6-11/26-28, min_len: 38, max_len: 42}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sampler: bicyclic
+  sample_num: 5
+
+
+# ======================================================================
+# User Controlled Demo
+# ======================================================================
+
+klk2_all_topology_compact:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: A124-125/A153/A155-156/A177-181
+  motif_cfg: null
+  lens_cfg:
+    nres: [60]
+    min_len: null
+    max_len: null
+    step_len: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1,  end_resid: last, distance: 3.8}
+      - {begin_resid: 8,  end_resid: 12, distance: 4.5}
+      - {begin_resid: 18, end_resid: 21, distance: 5.5}
+      - {begin_resid: 25, end_resid: 32, distance: 8.0}
+      - {begin_resid: 25, end_resid: 38, distance: 8.0}
+      - {begin_resid: 32, end_resid: 38, distance: 8.0}
+      - {begin_resid: 42, end_resid: 49, distance: 10.5}
+    restype:
+      - {resid: 8,  aa: K}
+      - {resid: 12, aa: E}
+      - {resid: 18, aa: C}
+      - {resid: 21, aa: C}
+      - {resid: 25, aa: C}
+      - {resid: 32, aa: C}
+      - {resid: 38, aa: C}
+      - {resid: 42, aa: MK8}
+      - {resid: 49, aa: MK8}
+  topology:
+    - {type: head_to_tail, begin_resid: 1,  end_resid: last}
+    - {type: isopep,       begin_resid: 8,  end_resid: 12}
+    - {type: disulfide,  begin_resid: 18, end_resid: 21}
+    - {type: bicyclic,   anchors: [25, 32, 38]}
+    - {type: alkane_staple, anchors: [42, 49]}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 5
+
+# ======================================================================
+# CPSet Topology Docking Examples
+# ======================================================================
+
+# A small CPSet-derived smoke panel kept in the general example selector.
+# Reference PDBs live in ./pdbs/cpset/{pdb_id}.pdb and keep CPSet chain/residue numbering.
+
+cpset_3avb_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/3avb.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: null
+  # CPSet 3avb: head_tail; direct v2 topology
+  # proxy_sequence: SLKIDNLD
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 8, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 8}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 1
+
+cpset_2yja_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/2yja.pdb
+  is_complex: true
+  pep_chain: A
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: null
+  # CPSet 2yja: carbon_carbon_crosslink; MK8 C-C staple
+  # proxy_sequence: HKMLHQMLQDS
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 3, end_resid: 7, distance: 6.1}
+    restype:
+      - {resid: 3, aa: MK8}
+      - {resid: 7, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [3, 7]}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 1
+
+cpset_6dn5_head_tail_passive_bal:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/6dn5.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: null
+  # CPSet 6dn5: head_tail; direct v2 topology
+  # proxy_sequence: WDINNNA
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 1
+
+cpset_1g9i_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1g9i.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: null
+  # CPSet 1g9i: disulfide; direct v2 topology
+  # proxy_sequence: EPCCDSCRCTKSIPPQCHCANI
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 3, end_resid: 7, distance: 5.5}
+      - {begin_resid: 4, end_resid: 19, distance: 5.5}
+      - {begin_resid: 9, end_resid: 17, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 7, aa: C}
+      - {resid: 4, aa: C}
+      - {resid: 19, aa: C}
+      - {resid: 9, aa: C}
+      - {resid: 17, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 3, end_resid: 7}
+    - {type: disulfide, begin_resid: 4, end_resid: 19}
+    - {type: disulfide, begin_resid: 9, end_resid: 17}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 1
+
+cpset_1sfi_head_tail_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1sfi.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: null
+  # CPSet 1sfi: disulfide+head_tail; direct v2 topology
+  # proxy_sequence: GRCTKSIPPICFPD
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 14, distance: 3.8}
+      - {begin_resid: 3, end_resid: 11, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 11, aa: C}
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 14}
+    - {type: disulfide, begin_resid: 3, end_resid: 11}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 1

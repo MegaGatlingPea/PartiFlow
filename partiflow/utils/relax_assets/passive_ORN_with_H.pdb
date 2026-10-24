@@ -1,0 +1,53 @@
+HETATM    1    N ORN A   1       0.747   1.775   0.281  1.00  0.00           N
+HETATM    2   CA ORN A   1       0.791   0.322   0.493  1.00  0.00           C
+HETATM    3   CB ORN A   1      -0.353  -0.340  -0.275  1.00  0.00           C
+HETATM    4   CG ORN A   1      -1.692   0.114   0.310  1.00  0.00           C
+HETATM    5   CD ORN A   1      -2.836  -0.549  -0.459  1.00  0.00           C
+HETATM    6   NE ORN A   1      -4.121  -0.113   0.104  1.00  0.00           N
+HETATM    7    C ORN A   1       2.108  -0.218  -0.001  1.00  0.00           C
+HETATM    8    O ORN A   1       2.766   0.421  -0.789  1.00  0.00           O
+HETATM    9    H ORN A   1       0.842   2.000  -0.698  1.00  0.00           H
+HETATM   10   HA ORN A   1       0.687   0.108   1.557  1.00  0.00           H
+HETATM   11  HB2 ORN A   1      -0.300  -0.053  -1.326  1.00  0.00           H
+HETATM   12  HB3 ORN A   1      -0.269  -1.424  -0.191  1.00  0.00           H
+HETATM   13  HG2 ORN A   1      -1.745  -0.174   1.360  1.00  0.00           H
+HETATM   14  HG3 ORN A   1      -1.776   1.197   0.225  1.00  0.00           H
+HETATM   15  HD2 ORN A   1      -2.783  -0.262  -1.509  1.00  0.00           H
+HETATM   16  HD3 ORN A   1      -2.751  -1.633  -0.374  1.00  0.00           H
+HETATM   17  HE1 ORN A   1      -4.197   0.893   0.095  1.00  0.00           H
+HETATM   18  HE2 ORN A   1      -4.894  -0.537  -0.387  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    9
+CONECT    9    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    7
+CONECT    7    2
+CONECT    2   10
+CONECT   10    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3   11
+CONECT   11    3
+CONECT    3   12
+CONECT   12    3
+CONECT    4    5
+CONECT    5    4
+CONECT    4   13
+CONECT   13    4
+CONECT    4   14
+CONECT   14    4
+CONECT    5    6
+CONECT    6    5
+CONECT    5   15
+CONECT   15    5
+CONECT    5   16
+CONECT   16    5
+CONECT    6   17
+CONECT   17    6
+CONECT    6   18
+CONECT   18    6
+CONECT    7    8
+CONECT    8    7
+END

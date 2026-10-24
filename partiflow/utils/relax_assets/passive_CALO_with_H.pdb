@@ -1,0 +1,44 @@
+HETATM    1    N ALO A   1       1.897  -0.339   0.228  1.00  0.00           N
+HETATM    2   CA ALO A   1       0.439  -0.474   0.099  1.00  0.00           C
+HETATM    3   CB ALO A   1      -0.247   0.400   1.149  1.00  0.00           C
+HETATM    4  CG2 ALO A   1       0.183  -0.046   2.547  1.00  0.00           C
+HETATM    5  OG1 ALO A   1      -1.665   0.269   1.023  1.00  0.00           O
+HETATM    6    C ALO A   1       0.014  -0.033  -1.277  1.00  0.00           C
+HETATM    7    O ALO A   1       0.646   0.814  -1.863  1.00  0.00           O
+HETATM    8    H ALO A   1       2.123  -0.544   1.189  1.00  0.00           H
+HETATM    9   HA ALO A   1       0.156  -1.515   0.251  1.00  0.00           H
+HETATM   10   HB ALO A   1       0.035   1.441   0.997  1.00  0.00           H
+HETATM   11 HG21 ALO A   1      -0.306   0.576   3.295  1.00  0.00           H
+HETATM   12 HG22 ALO A   1      -0.099  -1.088   2.699  1.00  0.00           H
+HETATM   13 HG23 ALO A   1       1.265   0.052   2.643  1.00  0.00           H
+HETATM   14  HG1 ALO A   1      -1.873  -0.664   1.165  1.00  0.00           H
+HETATM   15  OXT ALO A   1      -0.993  -0.543  -1.814  1.00  0.00           O
+CONECT    1    2
+CONECT    2    1
+CONECT    1    8
+CONECT    8    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    6
+CONECT    6    2
+CONECT    2    9
+CONECT    9    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3    5
+CONECT    5    3
+CONECT    3   10
+CONECT   10    3
+CONECT    4   11
+CONECT   11    4
+CONECT    4   12
+CONECT   12    4
+CONECT    4   13
+CONECT   13    4
+CONECT    5   14
+CONECT   14    5
+CONECT    6    7
+CONECT    7    6
+CONECT    6   15
+CONECT   15    6
+END

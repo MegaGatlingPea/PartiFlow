@@ -1,0 +1,38 @@
+HETATM    1    N DNP A   1      -0.628   1.524   0.396  1.00  0.00           N
+HETATM    2   CA DNP A   1      -0.258   0.104   0.464  1.00  0.00           C
+HETATM    3   CB DNP A   1      -1.178  -0.707  -0.451  1.00  0.00           C
+HETATM    4   NG DNP A   1      -2.579  -0.449  -0.089  1.00  0.00           N
+HETATM    5    C DNP A   1       1.171  -0.065   0.015  1.00  0.00           C
+HETATM    6    O DNP A   1       1.699   0.792  -0.653  1.00  0.00           O
+HETATM    7    H DNP A   1       0.064   2.030   0.928  1.00  0.00           H
+HETATM    8   HA DNP A   1      -0.361  -0.250   1.489  1.00  0.00           H
+HETATM    9  HB2 DNP A   1      -1.011  -0.415  -1.487  1.00  0.00           H
+HETATM   10  HB3 DNP A   1      -0.963  -1.769  -0.333  1.00  0.00           H
+HETATM   11  HG1 DNP A   1      -2.734  -0.720   0.870  1.00  0.00           H
+HETATM   12  HG2 DNP A   1      -2.778   0.534  -0.198  1.00  0.00           H
+HETATM   13  HG3 DNP A   1      -3.186  -0.984  -0.692  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    7
+CONECT    7    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    5
+CONECT    5    2
+CONECT    2    8
+CONECT    8    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3    9
+CONECT    9    3
+CONECT    3   10
+CONECT   10    3
+CONECT    4   11
+CONECT   11    4
+CONECT    4   12
+CONECT   12    4
+CONECT    4   13
+CONECT   13    4
+CONECT    5    6
+CONECT    6    5
+END

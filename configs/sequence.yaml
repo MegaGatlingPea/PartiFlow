@@ -1,0 +1,38 @@
+source: design
+fixed_positions: []
+seed: 101
+auto:
+  protein: soluble_mpnn
+  cyclic: soluble_mpnn
+proteinmpnn:
+  model_type: protein_mpnn
+  checkpoint: null
+  temperature: 0.0001
+  backbone_noise: 0.0
+  omit_aas: ''
+  rm_aa: C
+  bias_aa: {}
+  pssm_path: null
+  pssm_multi: 0.0
+  pssm_threshold: 0.0
+  pssm_log_odds: false
+  pssm_bias: false
+  tied_positions_path: null
+  ca_only: false
+  use_soluble_model: false
+solublempnn_defaults:
+  model_type: soluble_mpnn
+  checkpoint: null
+  temperature: 0.1
+  backbone_noise: 0.0
+  omit_aas: ''
+  rm_aa: C
+  bias_aa: {}
+  pssm_path: null
+  pssm_multi: 0.0
+  pssm_threshold: 0.0
+  pssm_log_odds: false
+  pssm_bias: false
+  tied_positions_path: null
+  ca_only: false
+  use_soluble_model: true

@@ -1,0 +1,83 @@
+HETATM    1   OH ALY A   1       1.006  -0.557   4.738  1.00  0.00           O
+HETATM    2   CH ALY A   1      -0.053   0.007   4.572  1.00  0.00           C
+HETATM    3  CH3 ALY A   1      -0.861   0.460   5.761  1.00  0.00           C
+HETATM    4   NZ ALY A   1      -0.509   0.231   3.324  1.00  0.00           N
+HETATM    5   CE ALY A   1       0.275  -0.208   2.167  1.00  0.00           C
+HETATM    6   CD ALY A   1      -0.461   0.164   0.879  1.00  0.00           C
+HETATM    7   CG ALY A   1       0.358  -0.294  -0.327  1.00  0.00           C
+HETATM    8   CB ALY A   1      -0.377   0.078  -1.615  1.00  0.00           C
+HETATM    9   CA ALY A   1       0.442  -0.381  -2.823  1.00  0.00           C
+HETATM   10    N ALY A   1       1.755   0.276  -2.802  1.00  0.00           N
+HETATM   11    C ALY A   1      -0.283  -0.013  -4.092  1.00  0.00           C
+HETATM   12    O ALY A   1      -0.079   1.056  -4.616  1.00  0.00           O
+HETATM   13 HH31 ALY A   1      -0.336   0.194   6.679  1.00  0.00           H
+HETATM   14 HH32 ALY A   1      -0.994   1.541   5.719  1.00  0.00           H
+HETATM   15 HH33 ALY A   1      -1.835  -0.027   5.746  1.00  0.00           H
+HETATM   16   HZ ALY A   1      -1.357   0.683   3.191  1.00  0.00           H
+HETATM   17  HE3 ALY A   1       1.250   0.278   2.183  1.00  0.00           H
+HETATM   18  HE2 ALY A   1       0.409  -1.289   2.209  1.00  0.00           H
+HETATM   19  HD3 ALY A   1      -1.435  -0.322   0.864  1.00  0.00           H
+HETATM   20  HD2 ALY A   1      -0.594   1.245   0.837  1.00  0.00           H
+HETATM   21  HG3 ALY A   1       1.333   0.192  -0.312  1.00  0.00           H
+HETATM   22  HG2 ALY A   1       0.492  -1.375  -0.285  1.00  0.00           H
+HETATM   23  HB3 ALY A   1      -1.352  -0.409  -1.631  1.00  0.00           H
+HETATM   24  HB2 ALY A   1      -0.511   1.159  -1.657  1.00  0.00           H
+HETATM   25   HA ALY A   1       0.575  -1.462  -2.781  1.00  0.00           H
+HETATM   26   H1 ALY A   1       1.583   1.269  -2.842  1.00  0.00           H
+HETATM   27   H2 ALY A   1       2.258  -0.055  -3.611  1.00  0.00           H
+HETATM   28   H3 ALY A   1       2.202   0.003  -1.940  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    4
+CONECT    4    2
+CONECT    3   13
+CONECT   13    3
+CONECT    3   14
+CONECT   14    3
+CONECT    3   15
+CONECT   15    3
+CONECT    4    5
+CONECT    5    4
+CONECT    4   16
+CONECT   16    4
+CONECT    5    6
+CONECT    6    5
+CONECT    5   17
+CONECT   17    5
+CONECT    5   18
+CONECT   18    5
+CONECT    6    7
+CONECT    7    6
+CONECT    6   19
+CONECT   19    6
+CONECT    6   20
+CONECT   20    6
+CONECT    7    8
+CONECT    8    7
+CONECT    7   21
+CONECT   21    7
+CONECT    7   22
+CONECT   22    7
+CONECT    8    9
+CONECT    9    8
+CONECT    8   23
+CONECT   23    8
+CONECT    8   24
+CONECT   24    8
+CONECT    9   10
+CONECT   10    9
+CONECT    9   11
+CONECT   11    9
+CONECT    9   25
+CONECT   25    9
+CONECT   10   26
+CONECT   26   10
+CONECT   11   12
+CONECT   12   11
+CONECT   10   27
+CONECT   27   10
+CONECT   10   28
+CONECT   28   10
+END

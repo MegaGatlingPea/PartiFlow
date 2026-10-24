@@ -1,0 +1,29 @@
+defaults:
+  - training
+  - override dataset: pepinter_acceptance
+  - _self_
+
+run_name_: fm_acceptance
+force_precision_f32: true
+hardware:
+  ncpus_per_task_train_: 1
+  ngpus_per_node_: 1
+  nnodes_: 1
+opt:
+  max_epochs: 1
+  max_steps: -1
+  val_check_interval: 1.0
+  grad_and_weight_analysis: false
+limit_train_batches: 1.0
+limit_val_batches: 1.0
+num_sanity_val_steps: 0
+log:
+  log_every_n_steps: 1
+  checkpoint_every_n_steps: null
+  checkpoint_every_n_epochs: 1
+  last_ckpt_every_n_steps: null
+  last_ckpt_every_n_epochs: 1
+  best_valloss_top_k: 0
+
+data_preparation:
+  subset: true

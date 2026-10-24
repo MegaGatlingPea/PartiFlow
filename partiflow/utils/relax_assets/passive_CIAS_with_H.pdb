@@ -1,0 +1,38 @@
+HETATM    1    N IAS A   1      -0.317   1.688   0.066  1.00  0.00           N
+HETATM    2   CA IAS A   1      -0.470   0.286  -0.344  1.00  0.00           C
+HETATM    3    C IAS A   1      -1.868  -0.180  -0.029  1.00  0.00           C
+HETATM    4    O IAS A   1      -2.534   0.415   0.786  1.00  0.00           O
+HETATM    5   CB IAS A   1       0.539  -0.580   0.413  1.00  0.00           C
+HETATM    6   CG IAS A   1       1.938  -0.195   0.004  1.00  0.00           C
+HETATM    7  OD1 IAS A   1       2.109   0.681  -0.810  1.00  0.00           O
+HETATM    8    H IAS A   1      -0.928   2.289  -0.467  1.00  0.00           H
+HETATM    9   HA IAS A   1      -0.292   0.199  -1.416  1.00  0.00           H
+HETATM   10  HB2 IAS A   1       0.419  -0.425   1.485  1.00  0.00           H
+HETATM   11  HB3 IAS A   1       0.367  -1.630   0.176  1.00  0.00           H
+HETATM   12  OD2 IAS A   1       2.992  -0.826   0.543  1.00  0.00           O
+HETATM   13  OXT IAS A   1      -2.339  -1.182  -0.610  1.00  0.00           O
+CONECT    1    2
+CONECT    2    1
+CONECT    1    8
+CONECT    8    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    5
+CONECT    5    2
+CONECT    2    9
+CONECT    9    2
+CONECT    3    4
+CONECT    4    3
+CONECT    5    6
+CONECT    6    5
+CONECT    5   10
+CONECT   10    5
+CONECT    5   11
+CONECT   11    5
+CONECT    6    7
+CONECT    7    6
+CONECT    6   12
+CONECT   12    6
+CONECT    3   13
+CONECT   13    3
+END

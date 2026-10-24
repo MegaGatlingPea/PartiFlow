@@ -1,0 +1,69 @@
+name: transformer_fm_large
+
+output_parameterization:
+  bb_ca: v  # or x_1
+  local_latents: v  # or x_1
+
+nlayers: 12
+nheads: 8
+token_dim: 576
+parallel_mha_transition: False
+
+strict_feats: False
+
+feats_seq:
+  - xt_bb_ca
+  - xt_local_latents
+  - x_sc_bb_ca
+  - x_sc_local_latents
+  - optional_ca_coors_nm_seq_feat
+  - optional_res_type_seq_feat
+  - bulk_all_atom_xmotif
+  - is_peptide_seq
+  - is_condition_seq
+  - receptor_hotspot
+
+feats_cond_seq:
+  - time_emb_bb_ca
+  - time_emb_local_latents
+  - binder_secondary_structure
+
+dim_cond: 192
+idx_emb_dim: 192
+t_emb_dim: 192
+binder_secstruct_emb_dim: 192
+binder_secstruct_num_classes: 5
+
+feats_pair_repr:
+  - rel_seq_sep
+  - rel_chain_type
+  - xt_bb_ca_pair_dists
+  - x_sc_bb_ca_pair_dists
+  - optional_ca_pair_dist
+  - x_motif_pair_dists
+
+feats_pair_cond:
+  - time_emb_bb_ca
+  - time_emb_local_latents
+
+xt_pair_dist_dim: 30
+xt_pair_dist_min: 0.1  # in nm (not A)
+xt_pair_dist_max: 3  # in nm (not A)
+
+x_sc_pair_dist_dim: 30
+x_sc_pair_dist_min: 0.1  # in nm (not A)
+x_sc_pair_dist_max: 3  # in nm (not A)
+
+seq_sep_dim: 95  # should be odd >= 5
+pair_repr_dim: 192
+
+chemical_bond_pair:
+  enabled: true
+  num_classes: 5
+  zero_init: true
+
+update_pair_repr: False
+update_pair_repr_every_n: 3
+use_tri_mult: False
+
+use_qkln: True

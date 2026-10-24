@@ -1,0 +1,41 @@
+HETATM    1    N DAS A   1       1.659  -0.052  -0.266  1.00  0.00           N
+HETATM    2   CA DAS A   1       0.266   0.365  -0.472  1.00  0.00           C
+HETATM    3    C DAS A   1      -0.163   0.007  -1.872  1.00  0.00           C
+HETATM    4    O DAS A   1       0.320  -0.951  -2.425  1.00  0.00           O
+HETATM    5   CB DAS A   1      -0.634  -0.350   0.535  1.00  0.00           C
+HETATM    6   CG DAS A   1      -0.205   0.007   1.935  1.00  0.00           C
+HETATM    7  OD1 DAS A   1       0.725   0.757   2.108  1.00  0.00           O
+HETATM    8  OD2 DAS A   1      -0.857  -0.507   2.989  1.00  0.00           O
+HETATM    9   H1 DAS A   1       2.199   0.359  -1.012  1.00  0.00           H
+HETATM   10   HA DAS A   1       0.185   1.442  -0.331  1.00  0.00           H
+HETATM   11  HB2 DAS A   1      -1.668  -0.040   0.382  1.00  0.00           H
+HETATM   12  HB3 DAS A   1      -0.553  -1.428   0.395  1.00  0.00           H
+HETATM   13   H2 DAS A   1       1.669  -1.060  -0.302  1.00  0.00           H
+HETATM   14   H3 DAS A   1       1.936   0.297   0.639  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    9
+CONECT    9    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    5
+CONECT    5    2
+CONECT    2   10
+CONECT   10    2
+CONECT    3    4
+CONECT    4    3
+CONECT    5    6
+CONECT    6    5
+CONECT    5   11
+CONECT   11    5
+CONECT    5   12
+CONECT   12    5
+CONECT    6    7
+CONECT    7    6
+CONECT    6    8
+CONECT    8    6
+CONECT    1   13
+CONECT   13    1
+CONECT    1   14
+CONECT   14    1
+END

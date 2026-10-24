@@ -1,0 +1,94 @@
+datamodule:
+  _target_: "partiflow.datasets.pdb_data.PepLightningDataModule"
+  split_csv: "./pep_data/docking/split_chemical_bond_adapter.csv"
+  processed_dir: "./pep_data/docking/processed"
+  pep_chain: "L"
+  use_processed_path_column: false
+  in_memory: False
+  overwrite: False
+  batch_padding: True
+  batch_size: 32
+  num_workers: 48
+  pin_memory: False
+  pad_max_size: null
+  truncate_to_pad_max_size: false
+  sample_loss_weights:
+    pdb_peptide: 1.5
+    protfrag: 1.0
+    cpcore: 1.0
+
+  transforms:
+    - _target_: "partiflow.datasets.transforms.CroppingTransform"
+      crop_size: 384
+      interface_threshold: 8.0
+      binder_min_length: 1
+      binder_max_length: 192
+      target_spatial_crop_threshold: 15.0
+      shuffle_dimer_chains: false
+    - _target_: "partiflow.datasets.transforms.AutoDisulfideAnnotationTransform"
+      scope: "peptide"
+      skip_if_topology_exists: true
+    - _target_: "partiflow.datasets.transforms.CopyCoordinatesTransform"
+    - _target_: "partiflow.datasets.transforms.CoordsToNanometers"
+    - _target_: "partiflow.datasets.transforms.BinderSecondaryAnnotationTransform"
+      alpha_threshold: 0.60
+      alpha_max_sheet_fraction: 0.05
+      beta_threshold: 0.40
+      beta_max_helix_fraction: 0.10
+      alpha_beta_min_helix_fraction: 0.20
+      alpha_beta_min_sheet_fraction: 0.15
+      alpha_beta_min_structured_fraction: 0.55
+      few_ss_max_structured_fraction: 0.45
+      few_ss_min_coil_fraction: 0.50
+      min_longest_helix_run: 6
+      min_longest_sheet_run: 4
+      null_prob: 0.67
+      fold_mask_detail_prob: 0.0
+      fold_mask_family_prob: 0.0
+      fold_mask_struct_prob: 0.0
+      use_unmodified_coords: true
+    - _target_: "partiflow.datasets.transforms.BinderSecondaryStructureAdjacencyTransform"
+      unconditioned_prob: 0.66
+      ss_only_prob: 0.17
+      full_condition_prob: 0.17
+    - _target_: "partiflow.datasets.transforms.CenterStructureTransform"
+      random_translation: true
+      translation_strategy: "normal"
+      translation_std_nm: 0.1
+    - _target_: "partiflow.datasets.transforms.GlobalRotationTransform"
+    - _target_: "partiflow.datasets.transforms.ChainBreakPerResidueTransform"
+    - _target_: "partiflow.datasets.transforms.ReceptorHotspotTransform"
+      drop_prob: 0.5
+      cutoff_nm: 0.8
+      keep_n_range: [4, 20]
+    - _target_: "partiflow.datasets.transforms.ConditionMaskTransform"
+      training_mode: "motif"
+      motif_prob: 0.20
+      motif_min_pct_res: 0.1
+      motif_max_pct_res: 0.5
+      motif_min_n_seg: 1
+      motif_max_n_seg: 3
+    - _target_: "partiflow.datasets.transforms.OptionalConditionTransform"
+      apply_prob: 0.20
+      generic_sparse_prob: 0.80
+      legacy_inv_folding_prob: 0.10
+      legacy_folding_prob: 0.10
+      joint_prob: 0.50
+      independent_prob: 0.50
+      joint_min_anchor_k: 4
+      joint_max_anchor_k: 8
+      indep_residue_prob: 0.50
+      indep_pair_prob: 0.50
+      residue_min_k: 2
+      residue_max_k: 8
+      pair_min_k: 2
+      pair_max_k: 12
+      min_seq_sep: 3
+      pair_nbins: 30
+      pair_min_dist_nm: 0.1
+      pair_max_dist_nm: 3.0
+      bin_reweight: true
+      prefer_designable_region: true
+      non_head_tail_forced_condition_drop_prob: 0.0
+    - _target_: "partiflow.datasets.transforms.MotifMaskTransform"
+      atom_selection_mode: "all"

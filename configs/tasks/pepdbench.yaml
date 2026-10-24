@@ -1,0 +1,189 @@
+# ======================================================================
+# Peptide Benchmark Tasks
+# ======================================================================
+
+dll3_top1_hotspot_linear:
+  task_type: denovo
+  pdb_path: ./pdbs/design/dll3/dll3.pdb
+  is_complex: false
+  pep_chain: null
+  hotspots: A33/A35/A51/A55/A57/A60/A101/A114
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: null
+
+dll3_top1_hotspot_cyclic:
+  task_type: denovo
+  pdb_path: ./pdbs/design/dll3/dll3.pdb
+  is_complex: false
+  pep_chain: null
+  sampler: head_to_tail
+  hotspots: A33/A35/A51/A55/A57/A60/A101/A114
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: alpha
+
+gabarap_top1_hotspot_linear:
+  task_type: denovo
+  pdb_path: ./pdbs/design/gabarap/gabarap.pdb
+  is_complex: false
+  pep_chain: null
+  hotspots: A30/A48/A51-54/A65/A69
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: beta
+
+gabarap_top1_hotspot_cyclic:
+  task_type: denovo
+  pdb_path: ./pdbs/design/gabarap/gabarap.pdb
+  is_complex: false
+  pep_chain: null
+  sampler: head_to_tail
+  hotspots: A30/A48/A51-54/A65/A69
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: beta
+
+keap1_top1_hotspot_linear:
+  task_type: denovo
+  pdb_path: ./pdbs/design/keap1/keap1.pdb
+  is_complex: false
+  pep_chain: null
+  hotspots: A10/A56/A91/A201/A231-232/A248/A278
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: alpha
+
+keap1_top1_hotspot_cyclic:
+  task_type: denovo
+  pdb_path: ./pdbs/design/keap1/keap1.pdb
+  is_complex: false
+  pep_chain: null
+  sampler: head_to_tail
+  hotspots: A10/A56/A91/A201/A231-232/A248/A278
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: alpha
+
+klk2_top1_hotspot_linear:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2.pdb
+  is_complex: false
+  pep_chain: null
+  hotspots: A124-125/A153/A155/A159/A177-179
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: null
+
+klk2_top1_hotspot_cyclic:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2.pdb
+  is_complex: false
+  pep_chain: null
+  sampler: head_to_tail
+  hotspots: A124-125/A153/A155/A159/A177-179
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: null
+
+mdm2_top1_hotspot_linear:
+  task_type: denovo
+  pdb_path: ./pdbs/design/mdm2/mdm2.pdb
+  is_complex: false
+  pep_chain: null
+  hotspots: A29/A33/A36-37/A42/A47/A68/A71
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: null
+
+mdm2_top1_hotspot_cyclic:
+  task_type: denovo
+  pdb_path: ./pdbs/design/mdm2/mdm2.pdb
+  is_complex: false
+  pep_chain: null
+  sampler: head_to_tail
+  hotspots: A29/A33/A36-37/A42/A47/A68/A71
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: null
+
+xiap_top1_hotspot_linear:
+  task_type: denovo
+  pdb_path: ./pdbs/design/xiap/xiap.pdb
+  is_complex: false
+  pep_chain: null
+  hotspots: A51-54/A59/A64/A68-69
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: beta
+
+xiap_top1_hotspot_cyclic:
+  task_type: denovo
+  pdb_path: ./pdbs/design/xiap/xiap.pdb
+  is_complex: false
+  pep_chain: null
+  sampler: head_to_tail
+  hotspots: A51-54/A59/A64/A68-69
+  motif_cfg: null
+  lens_cfg:
+    nres: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    min_len: null
+    max_len: null
+    step_len: null
+  sample_num: 40
+  binder_secondary_class: null

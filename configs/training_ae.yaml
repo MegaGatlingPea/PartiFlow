@@ -1,0 +1,79 @@
+output_dir: ./runs
+resume: auto
+enable_progress_bar: true
+limit_train_batches: 1.0
+limit_val_batches: 100
+num_sanity_val_steps: 0
+data_preparation:
+  enabled: false
+  root: ./train_data/pepinter
+  archive: ./train_data/archives/pepinter.tar.xz
+  subset: false
+  extract: false
+
+run_name_: ae_train
+
+eval_first_only: False
+is_cluster_run: True
+
+hardware:
+  ncpus_per_task_train_: 24
+  ncpus_per_task_prepro_: 32
+  accelerator: gpu
+  ngpus_per_node_: 1
+  nnodes_: 1
+
+defaults:
+  - dataset: pepinter_vae
+  - network: transformer_ae
+  - _self_
+
+pretrain_ckpt_path:
+
+loss:
+  kl:
+    weight: 1e-4
+    anneal: false
+    patience: 10000
+  struct:
+    type: l2
+    weight: 1.0
+  seq:
+    weight: 1.0
+
+force_precision_f32: False
+
+opt:
+  lr: 0.0001
+  max_steps: -1
+  max_epochs: 10
+  accumulate_grad_batches: 1
+  skip_nan_grad: False
+  grad_and_weight_analysis: True
+  dist_strategy: ddp
+  val_check_interval: 20000
+  skip_large_grad_updates:
+    use: False
+    moving_avg_size: 100
+    factor_threshold: 10
+    min_opt_steps: 2000
+
+log:
+  wandb_project: PartiFlow
+  wandb_entity: dragonworrier-zhejiang-university
+  log_wandb: False
+  offline: True
+  log_every_n_steps: 1000
+  checkpoint: True
+  checkpoint_every_n_steps: 20000
+  last_ckpt_every_n_steps: 5000
+
+seed: 2026
+
+ema:
+  decay: 0.999
+  validate_original_weights: False
+  every_n_steps: 1
+  cpu_offload: False
+
+

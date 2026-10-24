@@ -1,0 +1,11 @@
+include README.md pyproject.toml setup.py
+recursive-include configs *.yaml *.yml
+recursive-include pdbs *.pdb *.cif *.json *.csv
+recursive-include docs *.md *.png
+recursive-include partiflow *.py *.json *.txt *.csv *.yaml *.yml *.params *.xml *.pdb *.gcc
+recursive-include partiflow/tools *
+global-exclude *.pyc *.ckpt *.pt *.pth *.npz *.safetensors *.bin *.msgpack *.h5 *.hdf5 *.npy *.pkl
+prune train_data
+prune inference
+prune runs
+prune ckpts

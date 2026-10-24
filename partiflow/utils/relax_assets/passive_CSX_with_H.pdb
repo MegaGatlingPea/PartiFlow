@@ -1,0 +1,35 @@
+HETATM    1    N CSX A   1       1.094  -2.077   1.588  1.00  0.00           N
+HETATM    2   CA CSX A   1       1.330  -0.632   1.619  1.00  0.00           C
+HETATM    3   CB CSX A   1       1.068  -0.026   0.243  1.00  0.00           C
+HETATM    4   SG CSX A   1       1.344   1.776   0.235  1.00  0.00           S
+HETATM    5    C CSX A   1       0.384  -0.069   2.661  1.00  0.00           C
+HETATM    6    O CSX A   1      -0.738  -0.488   2.910  1.00  0.00           O
+HETATM    7   OD CSX A   1       2.822   2.000   0.228  1.00  0.00           O
+HETATM    8    H CSX A   1       0.330  -2.412   1.046  1.00  0.00           H
+HETATM    9   HA CSX A   1       2.364  -0.469   1.944  1.00  0.00           H
+HETATM   10  HB2 CSX A   1       1.755  -0.439  -0.504  1.00  0.00           H
+HETATM   11  HB3 CSX A   1       0.041  -0.203  -0.097  1.00  0.00           H
+HETATM   12   HG CSX A   1       2.912   2.956   0.227  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    8
+CONECT    8    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    5
+CONECT    5    2
+CONECT    2    9
+CONECT    9    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3   10
+CONECT   10    3
+CONECT    3   11
+CONECT   11    3
+CONECT    4    7
+CONECT    7    4
+CONECT    7   12
+CONECT   12    7
+CONECT    5    6
+CONECT    6    5
+END

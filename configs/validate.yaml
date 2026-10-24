@@ -1,0 +1,13 @@
+methods: [af2_ig]
+sequence:
+  seed: 101
+  sources:
+    - {source: gt, label: self, count: 1}
+    - {source: soluble_mpnn, label: soluble, count: 1, settings: {temperature: 0.1}}
+af2:
+  models: [1]
+  samples: 1
+  recycles: 3
+  seed: 101
+  mode: both
+criteria: []

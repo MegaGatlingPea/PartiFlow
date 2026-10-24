@@ -1,0 +1,333 @@
+# ======================================================================
+# Peptide Motif-Based Optimization Cases
+# ======================================================================
+
+peptide01_top01_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top01.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top02_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top02.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top03_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top03.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top04_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top04.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top05_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top05.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top06_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top06.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top07_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top07.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top08_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top08.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top09_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top09.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide01_top10_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide1/top10.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top01_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top01.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top02_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top02.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top03_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top03.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top04_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top04.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top05_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top05.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top06_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top06.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top07_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top07.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top08_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top08.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top09_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top09.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide02_top10_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide2/top10.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top01_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top01.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top02_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top02.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top03_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top03.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top04_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top04.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top05_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top05.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top06_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top06.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top07_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top07.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top08_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top08.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top09_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top09.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false
+
+peptide03_top10_motif:
+  task_type: motif
+  pdb_path: ./pdbs/design/il13ra/peptide3/top10.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: reference
+  motif_cfg: {contigs: reference, motif_min_pct_res: 0.20, motif_max_pct_res: 0.30, motif_min_n_seg: 1, motif_max_n_seg: 1, min_len: null, max_len: null}
+  lens_cfg: {nres: null, min_len: null, max_len: null, step_len: null}
+  sample_num: 10
+  postprocess: false

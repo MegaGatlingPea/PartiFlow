@@ -1,0 +1,46 @@
+defaults:
+  - generation: default
+  - search: default
+  - reward: null
+  - _self_
+seed: 2026
+sample_num: null
+task_names: null
+tasks: {}
+binder_secondary_class: null
+binder_topology: null
+condition_sampler: null
+omit_aa: null
+checkpoint:
+  model_ckpt: ./ckpts/partiflow.ckpt
+  autoencoder_ckpt: ./ckpts/autoencoder.ckpt
+output:
+  root_dir: ./inference
+  run_name: design
+  receptor_source: decoded
+datamodule:
+  _target_: partiflow.datasets.gen_dataset.InferenceLightningDataModule
+  batch_size: 16
+  num_workers: 16
+  batch_padding: true
+  pin_memory: true
+  interleave: false
+trainer:
+  accelerator: gpu
+  ngpus_per_node: 1
+  num_nodes: 1
+  strategy: auto
+  precision: bf16-mixed
+compile:
+  enabled: false
+  mode: default
+  dynamic: true
+  fullgraph: true
+postprocess_runtime:
+  platform: CUDA
+  keep_original: false
+  require_success: false
+  use_ray: null
+  relax_mode: local
+  relax_subset: null
+  relax_max_iter: null

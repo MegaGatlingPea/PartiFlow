@@ -1,0 +1,40 @@
+n_recycle: 0
+
+args:
+  nsteps: 200
+  self_cond: True
+
+  # Guidance
+  guidance_w: 1.0
+  ag_ratio: 0.0
+  ag_ckpt_path: null
+
+model:
+  bb_ca:
+    schedule:
+      mode: log
+      p: 2.0
+    gt:
+      mode: "1/t"
+      p: 1.0
+      clamp_val: null
+    simulation_step_params:
+      sampling_mode: sc
+      sc_scale_noise: 0.1
+      sc_scale_score: 1.0
+      t_lim_ode: 0.98
+      t_lim_ode_below: 0.02
+  local_latents:
+    schedule:
+      mode: power
+      p: 2.0
+    gt:
+      mode: "tan"
+      p: 1.0
+      clamp_val: null
+    simulation_step_params:
+      sampling_mode: sc
+      sc_scale_noise: 0.1
+      sc_scale_score: 1.0
+      t_lim_ode: 0.98
+      t_lim_ode_below: 0.02

@@ -1,0 +1,38 @@
+presets:
+  af2_ig_peptide:
+    methods:
+    - af2_ig
+    reduction: all_and_mean
+    rules:
+    - metric: plddt
+      op: '>='
+      value: 0.8
+      scope: complex
+    - metric: ptm
+      op: '>='
+      value: 0.55
+      scope: complex
+    - metric: iptm
+      op: '>='
+      value: 0.4
+      scope: complex
+    - metric: ipae_normalized
+      op: <=
+      value: 0.3
+      scope: complex
+    - metric: plddt
+      op: '>='
+      value: 0.8
+      scope: monomer
+    - metric: bound_unbound_rmsd
+      op: <=
+      value: 2.5
+      scope: paired
+  rosetta_bindcraft_peptide:
+    methods: [rosetta]
+    reduction: any_prediction
+    rules:
+      - {metric: shape_complementarity, op: '>', value: 0.55, scope: complex}
+      - {metric: interface_hbonds, op: '>', value: 1.0, scope: complex}
+      - {metric: interface_unsat_hbonds, op: '<', value: 3.0, scope: complex}
+      - {metric: surface_hydrophobicity, op: '<', value: 0.50, scope: complex}

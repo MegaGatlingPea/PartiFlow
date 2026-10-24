@@ -1,0 +1,32 @@
+HETATM    1    N DAL A   1      -1.564  -0.992   0.101  1.00  0.00           N
+HETATM    2   CA DAL A   1      -0.724   0.176   0.402  1.00  0.00           C
+HETATM    3   CB DAL A   1      -1.205   1.374  -0.420  1.00  0.00           C
+HETATM    4    C DAL A   1       0.709  -0.132   0.051  1.00  0.00           C
+HETATM    5    O DAL A   1       1.001  -1.213  -0.403  1.00  0.00           O
+HETATM    6    H DAL A   1      -1.281  -1.723   0.736  1.00  0.00           H
+HETATM    7   HA DAL A   1      -0.796   0.411   1.464  1.00  0.00           H
+HETATM    8  HB1 DAL A   1      -1.133   1.139  -1.481  1.00  0.00           H
+HETATM    9  HB2 DAL A   1      -2.241   1.597  -0.166  1.00  0.00           H
+HETATM   10  HB3 DAL A   1      -0.582   2.240  -0.197  1.00  0.00           H
+HETATM   11  OXT DAL A   1       1.596   0.731   0.230  1.00  0.00           O
+CONECT    1    2
+CONECT    2    1
+CONECT    1    6
+CONECT    6    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    4
+CONECT    4    2
+CONECT    2    7
+CONECT    7    2
+CONECT    3    8
+CONECT    8    3
+CONECT    3    9
+CONECT    9    3
+CONECT    3   10
+CONECT   10    3
+CONECT    4    5
+CONECT    5    4
+CONECT    4   11
+CONECT   11    4
+END

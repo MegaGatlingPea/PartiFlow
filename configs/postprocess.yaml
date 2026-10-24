@@ -1,0 +1,10 @@
+method: auto
+platform: CPU
+relax_mode: local
+relax_subset: null
+relax_max_iter: null
+relax_linear: true
+use_ray: false
+filter: false
+compute_buns: true
+criteria: [rosetta_bindcraft_peptide]

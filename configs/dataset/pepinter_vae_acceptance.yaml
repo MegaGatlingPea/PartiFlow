@@ -1,0 +1,9 @@
+defaults:
+  - pepinter_vae
+  - _self_
+
+datamodule:
+  split_csv: ./train_data/pepinter/indexes/acceptance.csv
+  batch_size: 1
+  num_workers: 0
+  pin_memory: false

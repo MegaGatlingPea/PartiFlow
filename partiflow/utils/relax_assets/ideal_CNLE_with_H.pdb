@@ -1,0 +1,38 @@
+HETATM    1    N NLE     1      13.364   7.296  24.912  1.00  0.00           N
+HETATM    2   CA NLE     1      14.263   7.450  23.771  1.00  0.00           C
+HETATM    3    C NLE     1      14.235   6.291  22.762  1.00  0.00           C
+HETATM    4    O NLE     1      14.156   6.538  21.559  1.00  0.00           O
+HETATM    5   CB NLE     1      15.694   7.756  24.237  1.00  0.00           C
+HETATM    6   CG NLE     1      16.648   8.170  23.121  1.00  0.00           C
+HETATM    7   CD NLE     1      17.398   6.983  22.527  1.00  0.00           C
+HETATM    8   CE NLE     1      18.422   7.446  21.510  1.00  0.00           C
+HETATM    9    H NLE     1      13.745   7.286  25.847  1.00  0.00           H
+HETATM   10   HA NLE     1      13.922   8.333  23.231  1.00  0.00           H
+HETATM   11  HB3 NLE     1      16.099   6.886  24.754  1.00  0.00           H
+HETATM   12  HB2 NLE     1      15.667   8.537  24.997  1.00  0.00           H
+HETATM   13  HG3 NLE     1      17.365   8.895  23.507  1.00  0.00           H
+HETATM   14  HG2 NLE     1      16.088   8.675  22.334  1.00  0.00           H
+HETATM   15  HD3 NLE     1      16.689   6.309  22.047  1.00  0.00           H
+HETATM   16  HD2 NLE     1      17.900   6.435  23.324  1.00  0.00           H
+HETATM   17   HE NLE     1      19.146   8.186  21.817  1.00  0.00           H
+HETATM   18  OXT NLE     1      14.293   5.113  23.177  1.00  0.00           O
+CONECT    1    2    9
+CONECT    2    1    3    5   10
+CONECT    3    2    4
+CONECT    4    3
+CONECT    5    2    6   11   12
+CONECT    6    5    7   13   14
+CONECT    7    6    8   15   16
+CONECT    8    7   17
+CONECT    9    1
+CONECT   10    2
+CONECT   11    5
+CONECT   12    5
+CONECT   13    6
+CONECT   14    6
+CONECT   15    7
+CONECT   16    7
+CONECT   17    8
+CONECT    3   18
+CONECT   18    3
+END

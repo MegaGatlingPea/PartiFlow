@@ -1,0 +1,43 @@
+HETATM    1    N PCA A   1       0.713   0.531  -0.633  1.00  0.00           N
+HETATM    2   CA PCA A   1      -0.328   0.539   0.400  1.00  0.00           C
+HETATM    3   CB PCA A   1      -1.455  -0.368  -0.140  1.00  0.00           C
+HETATM    4   CG PCA A   1      -1.232  -0.272  -1.667  1.00  0.00           C
+HETATM    5   CD PCA A   1       0.231   0.082  -1.807  1.00  0.00           C
+HETATM    6   OE PCA A   1       0.876  -0.019  -2.829  1.00  0.00           O
+HETATM    7    C PCA A   1       0.214  -0.015   1.691  1.00  0.00           C
+HETATM    8    O PCA A   1       1.122  -0.812   1.672  1.00  0.00           O
+HETATM    9    H PCA A   1       1.631   0.810  -0.489  1.00  0.00           H
+HETATM   10   HA PCA A   1      -0.700   1.552   0.552  1.00  0.00           H
+HETATM   11  HB2 PCA A   1      -1.331  -1.393   0.208  1.00  0.00           H
+HETATM   12  HB3 PCA A   1      -2.435   0.019   0.136  1.00  0.00           H
+HETATM   13  HG2 PCA A   1      -1.439  -1.230  -2.144  1.00  0.00           H
+HETATM   14  HG3 PCA A   1      -1.857   0.511  -2.095  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    5
+CONECT    5    1
+CONECT    1    9
+CONECT    9    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    7
+CONECT    7    2
+CONECT    2   10
+CONECT   10    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3   11
+CONECT   11    3
+CONECT    3   12
+CONECT   12    3
+CONECT    4    5
+CONECT    5    4
+CONECT    4   13
+CONECT   13    4
+CONECT    4   14
+CONECT   14    4
+CONECT    5    6
+CONECT    6    5
+CONECT    7    8
+CONECT    8    7
+END

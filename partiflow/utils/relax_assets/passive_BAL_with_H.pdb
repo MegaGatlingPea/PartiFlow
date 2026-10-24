@@ -1,0 +1,29 @@
+HETATM    1    N BAL A   1       2.716  -0.247  -0.035  1.00  0.00           N
+HETATM    2   CB BAL A   1       1.400   0.405  -0.014  1.00  0.00           C
+HETATM    3   CA BAL A   1       0.302  -0.661  -0.022  1.00  0.00           C
+HETATM    4    C BAL A   1      -1.048   0.008   0.000  1.00  0.00           C
+HETATM    5    O BAL A   1      -1.124   1.214   0.020  1.00  0.00           O
+HETATM    6    H BAL A   1       3.458   0.436  -0.031  1.00  0.00           H
+HETATM    7  HB3 BAL A   1       1.310   1.013   0.887  1.00  0.00           H
+HETATM    8  HB2 BAL A   1       1.295   1.041  -0.893  1.00  0.00           H
+HETATM    9  HA1 BAL A   1       0.392  -1.268  -0.923  1.00  0.00           H
+HETATM   10  HA2 BAL A   1       0.407  -1.297   0.857  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    6
+CONECT    6    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    7
+CONECT    7    2
+CONECT    2    8
+CONECT    8    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3    9
+CONECT    9    3
+CONECT    3   10
+CONECT   10    3
+CONECT    4    5
+CONECT    5    4
+END

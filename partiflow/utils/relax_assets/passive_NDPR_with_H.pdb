@@ -1,0 +1,49 @@
+HETATM    1    N DPR A   1       0.814   0.974   0.670  1.00  0.00           N
+HETATM    2   CA DPR A   1      -0.014  -0.244   0.598  1.00  0.00           C
+HETATM    3   CB DPR A   1       0.728  -1.247  -0.310  1.00  0.00           C
+HETATM    4   CG DPR A   1       2.199  -0.759  -0.242  1.00  0.00           C
+HETATM    5   CD DPR A   1       2.016   0.777  -0.168  1.00  0.00           C
+HETATM    6    C DPR A   1      -1.360   0.086   0.006  1.00  0.00           C
+HETATM    7    O DPR A   1      -1.509   1.105  -0.626  1.00  0.00           O
+HETATM    8   H2 DPR A   1       0.293   1.784   0.370  1.00  0.00           H
+HETATM    9   HA DPR A   1      -0.138  -0.667   1.595  1.00  0.00           H
+HETATM   10  HB2 DPR A   1       0.639  -2.260   0.083  1.00  0.00           H
+HETATM   11  HB3 DPR A   1       0.351  -1.194  -1.331  1.00  0.00           H
+HETATM   12  HG2 DPR A   1       2.695  -1.137   0.653  1.00  0.00           H
+HETATM   13  HG3 DPR A   1       2.747  -1.045  -1.140  1.00  0.00           H
+HETATM   14  HD2 DPR A   1       1.855   1.188  -1.165  1.00  0.00           H
+HETATM   15  HD3 DPR A   1       2.885   1.241   0.299  1.00  0.00           H
+HETATM   16   H3 DPR A   1       1.092   1.138   1.627  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    5
+CONECT    5    1
+CONECT    1    8
+CONECT    8    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    6
+CONECT    6    2
+CONECT    2    9
+CONECT    9    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3   10
+CONECT   10    3
+CONECT    3   11
+CONECT   11    3
+CONECT    4    5
+CONECT    5    4
+CONECT    4   12
+CONECT   12    4
+CONECT    4   13
+CONECT   13    4
+CONECT    5   14
+CONECT   14    5
+CONECT    5   15
+CONECT   15    5
+CONECT    6    7
+CONECT    7    6
+CONECT    1   16
+CONECT   16    1
+END

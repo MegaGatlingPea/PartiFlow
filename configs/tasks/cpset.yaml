@@ -1,0 +1,1000 @@
+# CPSet peptide docking cases
+cpset_1g9i_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1g9i.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 3, end_resid: 7, distance: 5.5}
+      - {begin_resid: 4, end_resid: 19, distance: 5.5}
+      - {begin_resid: 9, end_resid: 17, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 7, aa: C}
+      - {resid: 4, aa: C}
+      - {resid: 19, aa: C}
+      - {resid: 9, aa: C}
+      - {resid: 17, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 3, end_resid: 7}
+    - {type: disulfide, begin_resid: 4, end_resid: 19}
+    - {type: disulfide, begin_resid: 9, end_resid: 17}
+  sample_num: 25
+
+cpset_1sfi_head_tail_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1sfi.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 14, distance: 3.8}
+      - {begin_resid: 3, end_resid: 11, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 11, aa: C}
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 14}
+    - {type: disulfide, begin_resid: 3, end_resid: 11}
+  sample_num: 25
+
+cpset_1sld_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1sld.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 6, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 6, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 6}
+  sample_num: 25
+
+cpset_1sle_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1sle.pdb
+  is_complex: true
+  pep_chain: M
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 8, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 8, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 8}
+  sample_num: 25
+
+cpset_1smf_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1smf.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 9, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 9, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 9}
+  sample_num: 25
+
+cpset_1vwe_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1vwe.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 6, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 6, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 6}
+  sample_num: 25
+
+cpset_1vwm_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1vwm.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 6, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 6, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 6}
+  sample_num: 25
+
+cpset_1vwn_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1vwn.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 6, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 6, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 6}
+  sample_num: 25
+
+cpset_1vwo_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1vwo.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 8, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 8, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 8}
+  sample_num: 25
+
+cpset_1vwp_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1vwp.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 8, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 8, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 8}
+  sample_num: 25
+
+cpset_1yf4_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/1yf4.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 6, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 6, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 6}
+  sample_num: 25
+
+cpset_2br8_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/2br8.pdb
+  is_complex: true
+  pep_chain: G
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 2, end_resid: 8, distance: 5.5}
+      - {begin_resid: 3, end_resid: 16, distance: 5.5}
+    restype:
+      - {resid: 2, aa: C}
+      - {resid: 8, aa: C}
+      - {resid: 3, aa: C}
+      - {resid: 16, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 2, end_resid: 8}
+    - {type: disulfide, begin_resid: 3, end_resid: 16}
+  sample_num: 25
+
+cpset_2c9t_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/2c9t.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 2, end_resid: 8, distance: 5.5}
+      - {begin_resid: 3, end_resid: 12, distance: 5.5}
+    restype:
+      - {resid: 2, aa: C}
+      - {resid: 8, aa: C}
+      - {resid: 3, aa: C}
+      - {resid: 12, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 2, end_resid: 8}
+    - {type: disulfide, begin_resid: 3, end_resid: 12}
+  sample_num: 25
+
+cpset_2nwn_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/2nwn.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 12, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 12, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 12}
+  sample_num: 25
+
+cpset_2yja_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/2yja.pdb
+  is_complex: true
+  pep_chain: A
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 3, end_resid: 7, distance: 6.1}
+    restype:
+      - {resid: 3, aa: MK8}
+      - {resid: 7, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [3, 7]}
+  sample_num: 25
+
+cpset_2yq6_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/2yq6.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 8, end_resid: 12, distance: 6.1}
+    restype:
+      - {resid: 8, aa: MK8}
+      - {resid: 12, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [8, 12]}
+  sample_num: 25
+
+cpset_3avb_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/3avb.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 8, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 8}
+  sample_num: 25
+
+cpset_3avi_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/3avi.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 8, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 8}
+  sample_num: 25
+
+cpset_3g5v_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/3g5v.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 16, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 16, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 16}
+  sample_num: 25
+
+cpset_3g5y_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/3g5y.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 16, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 16, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 16}
+  sample_num: 25
+
+cpset_3oy5_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/3oy5.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 4, end_resid: 15, distance: 5.5}
+    restype:
+      - {resid: 4, aa: C}
+      - {resid: 15, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 4, end_resid: 15}
+  sample_num: 25
+
+cpset_3p8f_head_tail_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/3p8f.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 14, distance: 3.8}
+      - {begin_resid: 3, end_resid: 11, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 11, aa: C}
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 14}
+    - {type: disulfide, begin_resid: 3, end_resid: 11}
+  sample_num: 25
+
+cpset_4k1e_head_tail_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/4k1e.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 14, distance: 3.8}
+      - {begin_resid: 3, end_resid: 11, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 11, aa: C}
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 14}
+    - {type: disulfide, begin_resid: 3, end_resid: 11}
+  sample_num: 25
+
+cpset_4mzk_nle_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/4mzk.pdb
+  is_complex: true
+  pep_chain: T
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 9, end_resid: 13, distance: 6.2}
+    restype:
+      - {resid: 9, aa: NLE}
+      - {resid: 13, aa: NLE}
+  topology:
+    - {type: nle_staple, anchors: [9, 13]}
+  sample_num: 25
+
+cpset_4x1q_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/4x1q.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 10, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 10, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 10}
+  sample_num: 25
+
+cpset_4z0d_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/4z0d.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 13, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 13, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 13}
+  sample_num: 25
+
+cpset_4zhl_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/4zhl.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 10, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 10, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 10}
+  sample_num: 25
+
+cpset_5c3f_nle_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/5c3f.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 13, end_resid: 17, distance: 6.2}
+    restype:
+      - {resid: 13, aa: NLE}
+      - {resid: 17, aa: NLE}
+  topology:
+    - {type: nle_staple, anchors: [13, 17]}
+  sample_num: 25
+
+cpset_5dxe_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/5dxe.pdb
+  is_complex: true
+  pep_chain: C
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 3, end_resid: 7, distance: 6.1}
+    restype:
+      - {resid: 3, aa: MK8}
+      - {resid: 7, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [3, 7]}
+  sample_num: 25
+
+cpset_5n99_head_tail_passive_dpr:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/5n99.pdb
+  is_complex: true
+  pep_chain: E
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 5, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 5}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 25
+
+cpset_5w89_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/5w89.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 4, end_resid: 8, distance: 6.1}
+    restype:
+      - {resid: 4, aa: MK8}
+      - {resid: 8, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [4, 8]}
+  sample_num: 25
+
+cpset_5zjz_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/5zjz.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 7, end_resid: 11, distance: 6.1}
+    restype:
+      - {resid: 7, aa: MK8}
+      - {resid: 11, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [7, 11]}
+  sample_num: 25
+
+cpset_5zk5_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/5zk5.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 10, end_resid: 14, distance: 6.1}
+    restype:
+      - {resid: 10, aa: MK8}
+      - {resid: 14, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [10, 14]}
+  sample_num: 25
+
+cpset_5zk9_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/5zk9.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 7, end_resid: 11, distance: 6.1}
+    restype:
+      - {resid: 7, aa: MK8}
+      - {resid: 11, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [7, 11]}
+  sample_num: 25
+
+cpset_5zml_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/5zml.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 7, end_resid: 11, distance: 6.1}
+    restype:
+      - {resid: 7, aa: MK8}
+      - {resid: 11, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [7, 11]}
+  sample_num: 25
+
+cpset_6a8n_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/6a8n.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 10, distance: 5.5}
+    restype:
+      - {resid: 1, aa: C}
+      - {resid: 10, aa: C}
+  topology:
+    - {type: disulfide, begin_resid: 1, end_resid: 10}
+  sample_num: 25
+
+cpset_6bvh_head_tail_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/6bvh.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 14, distance: 3.8}
+      - {begin_resid: 3, end_resid: 11, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 11, aa: C}
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 14}
+    - {type: disulfide, begin_resid: 3, end_resid: 11}
+  sample_num: 25
+
+cpset_6d3y_head_tail_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/6d3y.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 14, distance: 3.8}
+      - {begin_resid: 3, end_resid: 11, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 11, aa: C}
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 14}
+    - {type: disulfide, begin_resid: 3, end_resid: 11}
+  sample_num: 25
+
+cpset_6d3z_head_tail_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/6d3z.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 14, distance: 3.8}
+      - {begin_resid: 3, end_resid: 11, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 11, aa: C}
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 14}
+    - {type: disulfide, begin_resid: 3, end_resid: 11}
+  sample_num: 25
+
+cpset_6d40_head_tail_disulfide:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/6d40.pdb
+  is_complex: true
+  pep_chain: L
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 14, distance: 3.8}
+      - {begin_resid: 3, end_resid: 11, distance: 5.5}
+    restype:
+      - {resid: 3, aa: C}
+      - {resid: 11, aa: C}
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 14}
+    - {type: disulfide, begin_resid: 3, end_resid: 11}
+  sample_num: 25
+
+cpset_6dn5_head_tail_passive_bal:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/6dn5.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 25
+
+cpset_7k2e_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2e.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  sample_num: 25
+
+cpset_7k2f_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2f.pdb
+  is_complex: true
+  pep_chain: C
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  sample_num: 25
+
+cpset_7k2g_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2g.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  sample_num: 25
+
+cpset_7k2h_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2h.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  sample_num: 25
+
+cpset_7k2i_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2i.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  sample_num: 25
+
+cpset_7k2k_head_tail_passive_bal:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2k.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 25
+
+cpset_7k2l_head_tail_passive_bal:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2l.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 25
+
+cpset_7k2m_head_tail:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2m.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  sample_num: 25
+
+cpset_7k2n_head_tail_passive_bal:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7k2n.pdb
+  is_complex: true
+  pep_chain: P
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 1, end_resid: 7, distance: 3.8}
+    restype: null
+  topology:
+    - {type: head_tail, begin_resid: 1, end_resid: 7}
+  postprocess:
+    enabled: true
+    method: auto
+  sample_num: 25
+
+# Post-AF3-cutoff selected MK8-stapled peptide docking cases.
+cpset_7v1a_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7v1a.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 13, end_resid: 17, distance: 6.1}
+    restype:
+      - {resid: 13, aa: MK8}
+      - {resid: 17, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [13, 17]}
+  postprocess:
+    enabled: true
+    method: openmm
+  sample_num: 25
+
+cpset_7w36_mk8_staple:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/7w36.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 11, end_resid: 15, distance: 6.1}
+    restype:
+      - {resid: 11, aa: MK8}
+      - {resid: 15, aa: MK8}
+  topology:
+    - {type: mk8_staple, anchors: [11, 15]}
+  postprocess:
+    enabled: true
+    method: openmm
+  sample_num: 25
+
+cpset_9fl8_mk8_staple_passive_nle:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/9fl8.pdb
+  is_complex: true
+  pep_chain: F
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 3, end_resid: 7, distance: 6.1}
+    restype:
+      - {resid: 3, aa: MK8}
+      - {resid: 7, aa: MK8}
+      - {resid: 8, aa: NLE}
+      - {resid: 15, aa: NLE}
+  topology:
+    - {type: mk8_staple, anchors: [3, 7]}
+    - {type: residue_template, resid: 8, resname: NLE}
+    - {type: residue_template, resid: 15, resname: NLE}
+  postprocess:
+    enabled: true
+    method: openmm
+  sample_num: 25
+
+cpset_9o14_mk8_staple_passive_nle:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/9o14.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 2, end_resid: 6, distance: 6.1}
+    restype:
+      - {resid: 2, aa: MK8}
+      - {resid: 6, aa: MK8}
+      - {resid: 13, aa: NLE}
+  topology:
+    - {type: mk8_staple, anchors: [2, 6]}
+    - {type: residue_template, resid: 13, resname: NLE}
+  postprocess:
+    enabled: true
+    method: openmm
+  sample_num: 25
+
+cpset_9o15_mk8_staple_passive_nle:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/9o15.pdb
+  is_complex: true
+  pep_chain: F
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 2, end_resid: 6, distance: 6.1}
+    restype:
+      - {resid: 2, aa: MK8}
+      - {resid: 6, aa: MK8}
+      - {resid: 13, aa: NLE}
+  topology:
+    - {type: mk8_staple, anchors: [2, 6]}
+    - {type: residue_template, resid: 13, resname: NLE}
+  postprocess:
+    enabled: true
+    method: openmm
+  sample_num: 25
+
+cpset_9o16_mk8_staple_passive_nle:
+  task_type: docking
+  pdb_path: ./pdbs/cpset/9o16.pdb
+  is_complex: true
+  pep_chain: B
+  hotspots: null
+  constraint:
+    cyclize: null
+    spatial:
+      - {begin_resid: 2, end_resid: 6, distance: 6.1}
+    restype:
+      - {resid: 2, aa: MK8}
+      - {resid: 6, aa: MK8}
+      - {resid: 13, aa: NLE}
+  topology:
+    - {type: mk8_staple, anchors: [2, 6]}
+    - {type: residue_template, resid: 13, resname: NLE}
+  postprocess:
+    enabled: true
+    method: openmm
+  sample_num: 25

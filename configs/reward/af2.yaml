@@ -1,0 +1,14 @@
+structure_source: fold
+sequence:
+  source: design
+  fixed_positions: []
+af2:
+  model: multimer
+  model_num: 1
+  num_recycles: 3
+  use_initial_guess: true
+  msa_policy: none
+  timeout_seconds: 7200
+score:
+  complex_plddt_weight: 0.25
+  complex_iptm_weight: 0.75

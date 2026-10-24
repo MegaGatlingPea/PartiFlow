@@ -1,0 +1,115 @@
+output_dir: ./runs
+resume: auto
+enable_progress_bar: true
+limit_train_batches: 1.0
+limit_val_batches: 100
+num_sanity_val_steps: 0
+data_preparation:
+  enabled: false
+  root: ./train_data/pepinter
+  archive: ./train_data/archives/pepinter.tar.xz
+  subset: false
+  extract: false
+
+run_name_: fm_train
+
+eval_first_only: False
+is_cluster_run: True
+val_run_generation: False
+
+hardware:
+  ncpus_per_task_train_: 24
+  ncpus_per_task_prepro_: 32
+  accelerator: gpu
+  ngpus_per_node_: 1
+  nnodes_: 1
+
+defaults:
+  - dataset: pepinter
+  - network: transformer_fm
+  - generation: validation
+  - metric: null
+  - _self_
+
+
+pretrain_ckpt_path: null
+
+motif_constraint_mode: rigid_receptor
+
+product_flowmatcher:
+  bb_ca:
+    weight: 1.0
+    zero_com_noise: False
+    guidance_enabled: True
+    dim: 3
+  local_latents:
+    weight: 1.0
+    zero_com_noise: False
+    guidance_enabled: True
+    dim: null
+
+autoencoder_ckpt_path: ./ckpts/autoencoder.ckpt
+
+loss:
+  t_distribution:
+    bb_ca:
+      name: mix_unif_beta
+      p1: 1.9
+      p2: 1.0
+      p3: 0.02
+    local_latents:
+      name: mix_unif_beta
+      p1: 1.0
+      p2: 1.5
+      p3: 0.2
+
+    shared_groups:
+
+force_precision_f32: False
+
+training:
+  n_recycle: 0
+  self_cond: True
+  p_folding_n_inv_folding_iters: 0.0
+
+compile:
+  enabled: False
+  mode: default
+  dynamic: False
+  fullgraph: True
+  inductor_cache_dir: .train_inductor_cache
+
+lora:
+  r: 0 # disable it
+  lora_alpha: 16.0
+  lora_dropout: 0.0
+  train_bias: none
+
+opt:
+  lr: 0.0001
+  max_steps: -1
+  max_epochs: 50
+  accumulate_grad_batches: 1
+  skip_nan_grad: False
+  grad_and_weight_analysis: False
+  dist_strategy: ddp
+  val_check_interval: 10000
+  ddp_timeout_hours: 5
+
+log:
+  wandb_project: PartiFlow
+  wandb_entity: dragonworrier-zhejiang-university
+  log_wandb: False
+  offline: True
+  log_every_n_steps: 1000
+  checkpoint: True
+  checkpoint_every_n_steps: 1000
+  last_ckpt_every_n_steps: 2000
+
+seed: 2026
+
+ema:
+  decay: 0.999
+  validate_original_weights: False
+  every_n_steps: 1
+  cpu_offload: False

@@ -1,0 +1,4 @@
+defaults:
+  - default
+  - _self_
+algorithm: best_of_n

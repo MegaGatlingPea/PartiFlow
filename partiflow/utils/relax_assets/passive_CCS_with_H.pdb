@@ -1,0 +1,50 @@
+HETATM    1    N CCS A   1       1.723  -0.315   1.910  1.00  0.00           N
+HETATM    2   CA CCS A   1       0.415   0.353   1.936  1.00  0.00           C
+HETATM    3   CB CCS A   1      -0.415  -0.103   0.736  1.00  0.00           C
+HETATM    4   SG CCS A   1       0.451   0.324  -0.798  1.00  0.00           S
+HETATM    5   CD CCS A   1      -0.729  -0.316  -2.017  1.00  0.00           C
+HETATM    6   CE CCS A   1      -0.203  -0.064  -3.406  1.00  0.00           C
+HETATM    7  OZ1 CCS A   1       0.859   0.490  -3.559  1.00  0.00           O
+HETATM    8  OZ2 CCS A   1      -0.915  -0.457  -4.474  1.00  0.00           O
+HETATM    9    C CCS A   1      -0.304  -0.002   3.211  1.00  0.00           C
+HETATM   10    O CCS A   1      -0.107  -1.071   3.738  1.00  0.00           O
+HETATM   11    H CCS A   1       2.123  -0.134   1.001  1.00  0.00           H
+HETATM   12   HA CCS A   1       0.558   1.433   1.889  1.00  0.00           H
+HETATM   13  HB2 CCS A   1      -0.558  -1.183   0.783  1.00  0.00           H
+HETATM   14  HB3 CCS A   1      -1.385   0.392   0.756  1.00  0.00           H
+HETATM   15  HD2 CCS A   1      -0.860  -1.388  -1.866  1.00  0.00           H
+HETATM   16  HD3 CCS A   1      -1.687   0.187  -1.894  1.00  0.00           H
+HETATM   17  HZ2 CCS A   1      -0.577  -0.295  -5.366  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1   11
+CONECT   11    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    9
+CONECT    9    2
+CONECT    2   12
+CONECT   12    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3   13
+CONECT   13    3
+CONECT    3   14
+CONECT   14    3
+CONECT    4    5
+CONECT    5    4
+CONECT    5    6
+CONECT    6    5
+CONECT    5   15
+CONECT   15    5
+CONECT    5   16
+CONECT   16    5
+CONECT    6    7
+CONECT    7    6
+CONECT    6    8
+CONECT    8    6
+CONECT    8   17
+CONECT   17    8
+CONECT    9   10
+CONECT   10    9
+END

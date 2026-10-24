@@ -1,0 +1,38 @@
+HETATM    1    N DCY A   1       1.592   0.453   0.079  1.00  0.00           N
+HETATM    2   CA DCY A   1       0.145   0.444  -0.175  1.00  0.00           C
+HETATM    3    C DCY A   1      -0.113  -0.000  -1.591  1.00  0.00           C
+HETATM    4    O DCY A   1       0.649  -0.765  -2.133  1.00  0.00           O
+HETATM    5   CB DCY A   1      -0.537  -0.521   0.795  1.00  0.00           C
+HETATM    6   SG DCY A   1      -0.226   0.014   2.500  1.00  0.00           S
+HETATM    7   H1 DCY A   1       2.010   1.018  -0.644  1.00  0.00           H
+HETATM    8   HA DCY A   1      -0.255   1.447  -0.030  1.00  0.00           H
+HETATM    9  HB2 DCY A   1      -1.610  -0.527   0.606  1.00  0.00           H
+HETATM   10  HB3 DCY A   1      -0.137  -1.525   0.651  1.00  0.00           H
+HETATM   11   HG DCY A   1      -0.893  -0.942   3.171  1.00  0.00           H
+HETATM   12   H2 DCY A   1       1.900  -0.506   0.036  1.00  0.00           H
+HETATM   13   H3 DCY A   1       1.723   0.852   0.995  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    7
+CONECT    7    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    5
+CONECT    5    2
+CONECT    2    8
+CONECT    8    2
+CONECT    3    4
+CONECT    4    3
+CONECT    5    6
+CONECT    6    5
+CONECT    5    9
+CONECT    9    5
+CONECT    5   10
+CONECT   10    5
+CONECT    6   11
+CONECT   11    6
+CONECT    1   12
+CONECT   12    1
+CONECT    1   13
+CONECT   13    1
+END

@@ -1,0 +1,53 @@
+HETATM    1    N DVA A   1      -1.897  -0.306   0.229  1.00  0.00           N
+HETATM    2   CA DVA A   1      -0.441  -0.465   0.124  1.00  0.00           C
+HETATM    3   CB DVA A   1       0.243   0.390   1.191  1.00  0.00           C
+HETATM    4  CG1 DVA A   1      -0.219  -0.056   2.579  1.00  0.00           C
+HETATM    5  CG2 DVA A   1       1.760   0.224   1.082  1.00  0.00           C
+HETATM    6    C DVA A   1       0.015  -0.025  -1.242  1.00  0.00           C
+HETATM    7    O DVA A   1      -0.591   0.836  -1.833  1.00  0.00           O
+HETATM    8   H1 DVA A   1      -2.300  -0.801  -0.552  1.00  0.00           H
+HETATM    9   HA DVA A   1      -0.178  -1.512   0.275  1.00  0.00           H
+HETATM   10   HB DVA A   1      -0.018   1.437   1.040  1.00  0.00           H
+HETATM   11 HG11 DVA A   1       0.268   0.554   3.339  1.00  0.00           H
+HETATM   12 HG12 DVA A   1      -1.300   0.062   2.656  1.00  0.00           H
+HETATM   13 HG13 DVA A   1       0.042  -1.103   2.730  1.00  0.00           H
+HETATM   14 HG21 DVA A   1       2.023  -0.822   1.233  1.00  0.00           H
+HETATM   15 HG22 DVA A   1       2.091   0.542   0.093  1.00  0.00           H
+HETATM   16 HG23 DVA A   1       2.248   0.834   1.842  1.00  0.00           H
+HETATM   17   H2 DVA A   1      -2.084   0.684   0.188  1.00  0.00           H
+HETATM   18   H3 DVA A   1      -2.170  -0.707   1.113  1.00  0.00           H
+CONECT    1    2
+CONECT    2    1
+CONECT    1    8
+CONECT    8    1
+CONECT    2    3
+CONECT    3    2
+CONECT    2    6
+CONECT    6    2
+CONECT    2    9
+CONECT    9    2
+CONECT    3    4
+CONECT    4    3
+CONECT    3    5
+CONECT    5    3
+CONECT    3   10
+CONECT   10    3
+CONECT    4   11
+CONECT   11    4
+CONECT    4   12
+CONECT   12    4
+CONECT    4   13
+CONECT   13    4
+CONECT    5   14
+CONECT   14    5
+CONECT    5   15
+CONECT   15    5
+CONECT    5   16
+CONECT   16    5
+CONECT    6    7
+CONECT    7    6
+CONECT    1   17
+CONECT   17    1
+CONECT    1   18
+CONECT   18    1
+END

@@ -1,0 +1,80 @@
+name: transformer_ae_large  # name of architecture
+
+latent_z_dim: &latent_z_dim 8
+
+encoder:
+  feats_seq:
+    - chain_break_per_res
+    - x1_aatype
+    - x1_a37coors_nm
+    - x1_a37coors_nm_rel
+    - x1_bb_angles
+    - x1_sidechain_angles
+
+  nlayers: 12
+  token_dim: 576
+  nheads: 8
+  parallel_mha_transition: False
+
+  strict_feats: False
+  feats_cond_seq:
+    - binder_secondary_structure
+
+  dim_cond: 192
+  idx_emb_dim: 192
+  binder_secstruct_emb_dim: 192
+  binder_secstruct_num_classes: 5
+
+  feats_pair_repr:
+    - rel_seq_sep
+    - rel_chain_idx
+    - x1_bb_pair_dists_nm
+    - x1_bb_pair_orientation
+
+  seq_sep_dim: 95
+  pair_repr_dim: 192
+
+  update_pair_repr: False
+  update_pair_repr_every_n: 3
+  use_tri_mult: False
+  use_qkln: True
+
+  normalize_latent: false
+  latent_z_dim: *latent_z_dim
+
+decoder:
+  nlayers: 12
+  token_dim: 576
+
+  abs_coors: False
+
+  nheads: 8
+  parallel_mha_transition: False
+
+  strict_feats: False
+
+  feats_seq:
+    - ca_coors_nm
+    - z_latent_seq
+
+  feats_cond_seq:
+    - binder_secondary_structure
+
+  dim_cond: 192
+  idx_emb_dim: 192
+  binder_secstruct_emb_dim: 64
+  binder_secstruct_num_classes: 5
+
+  feats_pair_repr:
+    - rel_seq_sep
+    - rel_chain_idx
+    - ca_coors_nm_pair_dists
+
+  seq_sep_dim: 95
+  pair_repr_dim: 192
+
+  update_pair_repr: False
+  update_pair_repr_every_n: 3
+  use_tri_mult: False
+  use_qkln: True
+  latent_z_dim: *latent_z_dim
