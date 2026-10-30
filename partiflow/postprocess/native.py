@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from functools import lru_cache
 import json
 import math
 import os
@@ -9,9 +10,12 @@ import tempfile
 import threading
 import warnings as warnings_module
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
 import pyrosetta as pr
+
+from partiflow.postprocess.source import PDBSource
 
 
 # This module is deliberately self-contained.  It is imported by both the
@@ -496,16 +500,51 @@ def _validate_existing_init_options(options: str, params_paths: Sequence[Path]) 
         )
 
 
+def _assert_native_ref2015_profile(options: str) -> None:
+    """NCAA chemistry must not inherit Beta's process-wide atom parameters."""
+    tokens = shlex.split(str(options))
+    for index, token in enumerate(tokens):
+        name, separator, attached = str(token).partition("=")
+        if not _option_key(name).endswith("beta_nov16"):
+            continue
+        value = attached if separator else (
+            str(tokens[index + 1]) if index + 1 < len(tokens)
+            and not str(tokens[index + 1]).startswith("-") else "true"
+        )
+        if value.strip().lower() not in {"false", "0", "no", "off"}:
+            raise RuntimeError("native_ref2015 requires its own process; Beta chemistry is already enabled")
+    initialized = bool(options) or _INITIALIZED
+    if not initialized:
+        try:
+            initialized = bool(pr.rosetta.basic.was_init_called())
+        except Exception:
+            initialized = False
+    if not initialized:
+        return
+    try:
+        beta_enabled = pr.rosetta.basic.options.get_boolean_option("corrections:beta_nov16")
+    except Exception:
+        beta_enabled = False
+    if beta_enabled:
+        raise RuntimeError("native_ref2015 requires its own process; Beta chemistry is already enabled")
 
-def initialize_pyrosetta_score_only(*, silent: bool = True) -> None:
-    """Initialize once with all project params and strict residue handling."""
+
+def initialize_pyrosetta_score_only(
+    *, silent: bool = True, seed: int | None = None, threads: int | None = None
+) -> None:
+    """Initialize once with the original native ref2015 chemistry and params."""
+    if seed is not None and (type(seed) is not int or seed < 0):
+        raise ValueError("seed must be a nonnegative integer")
+    if threads is not None and (type(threads) is not int or threads < 1):
+        raise ValueError("threads must be a positive integer")
     global _INITIALIZED
     with _INITIALIZE_LOCK:
+        options = _runtime_option_text()
+        _assert_native_ref2015_profile(options)
         if _INITIALIZED:
             return
         validate_generated_params_sources()
         params_paths, _ = _source_paths()
-        options = _runtime_option_text()
         if options:
             _validate_existing_init_options(options, params_paths)
         else:
@@ -514,9 +553,12 @@ def initialize_pyrosetta_score_only(*, silent: bool = True) -> None:
                 "-ignore_unrecognized_res false", "-ignore_zero_occupancy true",
                 "-relax:default_repeats 1",
                 "-holes:dalphaball " + shlex.quote(str(_MODULE_ROOT / "bin" / "DAlphaBall.gcc")),
-                "-in:file:extra_res_fa",
-                *[shlex.quote(str(path)) for path in params_paths],
             ]
+            if seed is not None:
+                option_parts.extend(("-constant_seed", "-jran " + str(seed)))
+            if threads is not None:
+                option_parts.append("-multithreading:total_threads " + str(threads))
+            option_parts.extend(("-in:file:extra_res_fa", *[shlex.quote(str(path)) for path in params_paths]))
             pr.init(" ".join(option_parts), silent=silent)
             _validate_existing_init_options(_runtime_option_text(), params_paths)
         _INITIALIZED = True
@@ -553,13 +595,14 @@ def _pdb_element(line: str, atom_name: str) -> str:
     return letters[:1] if letters else ""
 
 
-def _params_atom_names(path: Path) -> set[str]:
+@lru_cache(maxsize=None)
+def _params_atom_names(path: Path) -> frozenset[str]:
     names: set[str] = set()
-    for line in path.read_text().splitlines():
+    for line in Path(path).read_text().splitlines():
         fields = line.split()
         if fields and fields[0] == "ATOM" and len(fields) >= 2:
             names.add(fields[1])
-    return names
+    return frozenset(names)
 
 
 def _residue_type_set() -> Any:
@@ -579,22 +622,32 @@ def _native_type(entry: Mapping[str, Any]) -> Any:
         ) from exc
 
 
-def _runtime_atom_names(entry: Mapping[str, Any], *, pre_patch: bool = False) -> set[str]:
-    # Project-derived patch aliases are imported from their own params; do not
-    # filter their native-derived atom namespace against the unpatched base
-    # ResidueType.
-    if entry.get("params") is not None:
-        return _params_atom_names(entry["params"])
-    native = _native_type(entry)
+@lru_cache(maxsize=None)
+def _cached_runtime_atom_names(
+    params: str | None, runtime_name: str, handling: str,
+    pre_patch: bool, residue_code: str,
+) -> frozenset[str]:
+    if params is not None:
+        return _params_atom_names(Path(params))
+    native = _native_type({"runtime_name": runtime_name, "handling": handling, "residue_code": residue_code})
     if native is not None:
-        if pre_patch and ":" in str(entry.get("runtime_name", "")):
-            base_name = str(entry["runtime_name"]).split(":", 1)[0]
+        if pre_patch and ":" in runtime_name:
             try:
-                native = _residue_type_set().name_map(base_name)
+                native = _residue_type_set().name_map(runtime_name.split(":", 1)[0])
             except Exception:
                 pass
-        return {str(native.atom_name(index)).strip() for index in range(1, native.natoms() + 1)}
-    return set()
+        return frozenset(str(native.atom_name(i)).strip() for i in range(1, native.natoms() + 1))
+    return frozenset()
+
+
+def _runtime_atom_names(entry: Mapping[str, Any], *, pre_patch: bool = False) -> frozenset[str]:
+    """Reuse immutable runtime names after this process selects its chemistry."""
+    params = entry.get("params")
+    return _cached_runtime_atom_names(
+        str(params) if params is not None else None,
+        str(entry.get("runtime_name", "")), str(entry.get("handling", "")), bool(pre_patch),
+        str(entry.get("residue_code", entry.get("pdb_alias", "NCAA"))),
+    )
 
 
 def _mapping_for_code(code: str) -> dict[str, Any] | None:
@@ -605,94 +658,94 @@ def _mapping_for_code(code: str) -> dict[str, Any] | None:
     return matrix["residues"].get(source) if source else None
 
 
-def _atom_name_maps(entry: Mapping[str, Any]) -> tuple[dict[str, str], dict[str, str]]:
-    """Return source->loaded and loaded->source maps for one matrix row."""
-    mapping = entry.get("mapping", {})
-    forward = {
-        str(source): str(loaded)
-        for source, loaded in (
-            mapping.get("atom_rename", {}) if isinstance(mapping, Mapping) else {}
-        ).items()
-    }
+@lru_cache(maxsize=None)
+def _cached_atom_name_maps(
+    renamed: tuple[tuple[str, str], ...], n_methyl_alias: bool,
+) -> tuple[Mapping[str, str], Mapping[str, str]]:
+    forward = dict(renamed)
     if len(set(forward.values())) != len(forward):
-        raise ValueError(
-            f"{entry.get('residue_code', entry.get('pdb_alias', 'NCAA'))}: atom rename is not one-to-one"
-        )
-    # Native N-methyl patch atom names (1HN/2HN/3HN) collide with Rosetta's
-    # generated patch atom during fresh residue-type construction.  The
-    # project-derived alias retains source HN1/HN2/HN3 in its params; the
-    # matrix atom_rename remains the independent native-runtime audit map.
-    if entry.get("params") is not None and str(entry.get("handling", "")) == "native_patch_alias":
+        raise ValueError("atom rename is not one-to-one")
+    if n_methyl_alias:
         for source_name in ("HN1", "HN2", "HN3"):
-            native_name = forward.get(source_name)
-            if native_name in {"1HN", "2HN", "3HN"}:
+            if forward.get(source_name) in {"1HN", "2HN", "3HN"}:
                 forward[source_name] = source_name
-    return forward, {loaded: source for source, loaded in forward.items()}
+    return MappingProxyType(forward), MappingProxyType({loaded: source for source, loaded in forward.items()})
 
 
-def _normalized_pdb(
-    path: str | os.PathLike[str],
-    *,
-    binder_chain: str,
+def _atom_name_maps(entry: Mapping[str, Any]) -> tuple[Mapping[str, str], Mapping[str, str]]:
+    """Return the cached, read-only source and runtime atom-name maps."""
+    mapping = entry.get("mapping", {})
+    renamed = mapping.get("atom_rename", {}) if isinstance(mapping, Mapping) else {}
+    try:
+        return _cached_atom_name_maps(
+            tuple((str(source), str(loaded)) for source, loaded in renamed.items()),
+            entry.get("params") is not None and str(entry.get("handling", "")) == "native_patch_alias",
+        )
+    except ValueError as exc:
+        raise ValueError(f"{entry.get('residue_code', entry.get('pdb_alias', 'NCAA'))}: {exc}") from exc
+
+
+def _pdb_source(path: str | os.PathLike[str], source: PDBSource | None = None) -> PDBSource:
+    return source if source is not None else PDBSource.read(path)
+
+
+def _normalized_pdb_text(
+    path: str | os.PathLike[str], *, binder_chain: str, source: PDBSource | None = None,
 ) -> str:
-    """Rewrite source NCAA names to the matrix runtime PDB name.
-
-    For native N-methyl patches the pre-patch base type is used during PDB
-    import; the patch and its additional atoms are applied after loading so
-    source coordinates can be copied onto the patched ResidueType exactly.
-    """
-    source = Path(path)
-    _validate_coordinate_record_envelope(source)
+    """Normalize native import names without an intermediate PDB file."""
+    source = _pdb_source(path, source)
+    _validate_coordinate_record_envelope(path, source=source)
     terminal_oxt_residues = {
         (chain, int(number), str(icode))
         for chain, number, icode, _occurrence, atom in _terminal_oxt_keys(
-            _source_heavy_atoms(source, binder_chain=binder_chain)
-        )
-        if atom == "OXT"
+            _source_heavy_atoms(path, binder_chain=binder_chain, source=source)
+        ) if atom == "OXT"
     }
-    fd, tmp = tempfile.mkstemp(prefix="partiflow_ncaa_", suffix=".pdb", text=True)
-    os.close(fd)
-    with source.open() as src, open(tmp, "w") as dst:
-        for line in src:
-            if line.startswith(("LINK", "CONECT")):
-                continue
-            if line.startswith(("ATOM", "HETATM")):
-                code = line[17:20].strip()
-                standard_alias = _STANDARD_RESIDUE_ALIASES.get(code)
-                if standard_alias is not None:
-                    line = line[:17] + standard_alias + line[20:]
-                    code = standard_alias
-                entry = _mapping_for_code(code)
-                if entry is not None:
-                    mapping, _ = _atom_name_maps(entry)
-                    atom = line[12:16].strip()
-                    renamed = str(mapping.get(atom, atom))
-                    allowed = _runtime_atom_names(
-                        entry,
-                        pre_patch=str(entry.get("handling", "")).startswith("native_patch_alias"),
-                    )
-                    if renamed not in allowed:
-                        element = _pdb_element(line, atom)
-                        residue_key = (
-                            line[21:22].strip() or " ",
-                            int(line[22:26]),
-                            line[26:27].strip() or " ",
-                        )
-                        explicit_terminal_oxt = atom == "OXT" and residue_key in terminal_oxt_residues
-                        if element not in {"H", "D"}:
-                            # Native N-methyl patches add CN after import; the
-                            # base ResidueType intentionally does not accept it.
-                            if not explicit_terminal_oxt and not (
-                                str(entry.get("handling", "")) == "native_patch_alias"
-                                and atom in {"CN", "HN1", "HN2", "HN3"}
-                            ):
-                                raise ValueError(f"{code}: source heavy atom {atom!r} is absent from runtime type")
-                        if not explicit_terminal_oxt:
-                            continue
-                    line = line[:12] + renamed.rjust(4) + line[16:]
-                    line = line[:17] + str(entry.get("runtime_pdb_name") or entry["pdb_alias"]) + line[20:]
-            dst.write(line)
-    return tmp
+    output = []
+    for line in source.text.splitlines(keepends=True):
+        if line.startswith(("LINK", "CONECT")):
+            continue
+        if line.startswith(("ATOM", "HETATM")):
+            code = line[17:20].strip()
+            standard_alias = _STANDARD_RESIDUE_ALIASES.get(code)
+            if standard_alias is not None:
+                line = line[:17] + standard_alias + line[20:]
+                code = standard_alias
+            entry = _mapping_for_code(code)
+            if entry is not None:
+                mapping, _ = _atom_name_maps(entry)
+                atom = line[12:16].strip()
+                renamed = str(mapping.get(atom, atom))
+                allowed = _runtime_atom_names(
+                    entry, pre_patch=str(entry.get("handling", "")).startswith("native_patch_alias"),
+                )
+                if renamed not in allowed:
+                    element = _pdb_element(line, atom)
+                    residue_key = (line[21:22].strip() or " ", int(line[22:26]), line[26:27].strip() or " ")
+                    explicit_terminal_oxt = atom == "OXT" and residue_key in terminal_oxt_residues
+                    if element not in {"H", "D"}:
+                        if not explicit_terminal_oxt and not (
+                            str(entry.get("handling", "")) == "native_patch_alias"
+                            and atom in {"CN", "HN1", "HN2", "HN3"}
+                        ):
+                            raise ValueError(f"{code}: source heavy atom {atom!r} is absent from runtime type")
+                    if not explicit_terminal_oxt:
+                        continue
+                line = line[:12] + renamed.rjust(4) + line[16:]
+                line = line[:17] + str(entry.get("runtime_pdb_name") or entry["pdb_alias"]) + line[20:]
+        output.append(line)
+    return "".join(output)
+
+
+def _normalized_pdb(
+    path: str | os.PathLike[str], *, binder_chain: str, source: PDBSource | None = None,
+) -> str:
+    """Legacy file adapter for callers that require a normalized filename."""
+    text = _normalized_pdb_text(path, binder_chain=binder_chain, source=source)
+    descriptor, temporary = tempfile.mkstemp(prefix="partiflow_ncaa_", suffix=".pdb", text=True)
+    with os.fdopen(descriptor, "w") as handle:
+        handle.write(text)
+    return temporary
 
 
 def _reject_pdb_residue_types(pose: Any) -> None:
@@ -896,6 +949,7 @@ def _apply_native_runtime_types(
     pdb_path: str | os.PathLike[str],
     *,
     binder_chain: str,
+    source: PDBSource | None = None,
 ) -> dict[str, Any]:
     """Apply native N-methyl variants and verify every native runtime type.
 
@@ -904,7 +958,8 @@ def _apply_native_runtime_types(
     rotamer generation.  Coordinates for all source-mapped atoms are copied
     back after replacement so fixed-coordinate identity remains auditable.
     """
-    source_codes = _source_residue_keys(pdb_path)
+    source = _pdb_source(pdb_path, source)
+    source_codes = _source_residue_keys(pdb_path, source=source)
     matrix = _load_matrix()
     info = pose.pdb_info()
     binder_indices = _binder_indices(pose, binder_chain)
@@ -940,7 +995,7 @@ def _apply_native_runtime_types(
             source_atom_map, _ = _atom_name_maps(entry)
             # New CN/HN atoms were absent from the base PDB import; assign all
             # source coordinates by the same forward mapping used in the CSV.
-            source_xyz = _source_heavy_and_hydrogen_atoms(pdb_path, key)
+            source_xyz = _source_heavy_and_hydrogen_atoms(pdb_path, key, source=source)
             for source_atom, runtime_atom in source_atom_map.items():
                 if runtime_atom in {str(residue.atom_name(i)).strip() for i in range(1, residue.natoms() + 1)}:
                     if source_atom in source_xyz:
@@ -1085,71 +1140,67 @@ def _runtime_residue_audit(
 
 
 def _source_heavy_and_hydrogen_atoms(
-    path: str | os.PathLike[str],
-    residue_key: tuple[str, int, str],
+    path: str | os.PathLike[str], residue_key: tuple[str, int, str],
+    *, source: PDBSource | None = None,
 ) -> dict[str, Any]:
-    atoms: dict[str, Any] = {}
-    with Path(path).open() as handle:
-        for line in handle:
-            if not line.startswith(("ATOM  ", "HETATM")):
-                continue
-            key = (line[21:22].strip() or " ", int(line[22:26]), line[26:27].strip() or " ")
-            if key != residue_key:
-                continue
-            name = line[12:16].strip()
-            atoms[name] = pr.rosetta.numeric.xyzVector_double_t(
-                float(line[30:38]), float(line[38:46]), float(line[46:54])
-            )
-    return atoms
+    source = _pdb_source(path, source)
+    def collect():
+        return {atom["atom"]: atom["xyz"] for atom in source.atoms
+                if (atom["chain"], int(atom["res_id"]), atom["ins_code"] or " ") == residue_key}
+    coordinates = source.cached(("all_atom_coordinates", residue_key), collect)
+    return {name: pr.rosetta.numeric.xyzVector_double_t(*xyz) for name, xyz in coordinates.items()}
 
 
-def _source_residue_keys(path: str | os.PathLike[str]) -> dict[tuple[str, int, str], str]:
-    rows: dict[tuple[str, int, str], str] = {}
-    with Path(path).open() as handle:
-        for line in handle:
-            if not line.startswith(("ATOM  ", "HETATM")):
-                continue
-            code = line[17:20].strip()
-            if code not in _load_matrix()["residues"]:
+def _source_residue_keys(
+    path: str | os.PathLike[str], *, source: PDBSource | None = None,
+) -> dict[tuple[str, int, str], str]:
+    source = _pdb_source(path, source)
+    def collect():
+        rows: dict[tuple[str, int, str], str] = {}
+        matrix = _load_matrix()["residues"]
+        for atom in source.atoms:
+            code = atom["resname"]
+            if code not in matrix:
                 continue
             try:
-                key = (line[21:22].strip() or " ", int(line[22:26]), line[26:27].strip() or " ")
+                key = (atom["chain"], int(atom["res_id"]), atom["ins_code"] or " ")
             except ValueError as exc:
-                raise ValueError(f"invalid residue key in {path}: {line.rstrip()!r}") from exc
+                raise ValueError(f"invalid residue key in {path}: {atom['res_id']!r}") from exc
             previous = rows.setdefault(key, code)
             if previous != code:
                 raise ValueError(f"residue key maps to multiple NCAA codes in {path}: {key!r}")
-    return rows
+        return rows
+    return source.cached("native_residue_codes", collect)
 
 
-def _source_atom_names(path: str | os.PathLike[str]) -> dict[tuple[str, int, str], set[str]]:
-    """Return the complete source atom-name set for each PDB residue key."""
-    rows: dict[tuple[str, int, str], set[str]] = {}
-    with Path(path).open() as handle:
-        for line in handle:
-            if not line.startswith(("ATOM  ", "HETATM")):
-                continue
+def _source_atom_names(
+    path: str | os.PathLike[str], *, source: PDBSource | None = None,
+) -> dict[tuple[str, int, str], set[str]]:
+    """Return source names without reopening the same PDB."""
+    source = _pdb_source(path, source)
+    def collect():
+        rows: dict[tuple[str, int, str], set[str]] = {}
+        for atom in source.atoms:
             try:
-                key = (line[21:22].strip() or " ", int(line[22:26]), line[26:27].strip() or " ")
+                key = (atom["chain"], int(atom["res_id"]), atom["ins_code"] or " ")
             except ValueError:
                 continue
-            rows.setdefault(key, set()).add(line[12:16].strip())
-    return rows
+            rows.setdefault(key, set()).add(atom["atom"])
+        return rows
+    return source.cached("atom_names", collect)
 
 
-def _validate_coordinate_record_envelope(path: str | os.PathLike[str]) -> None:
-    """Reject coordinate-selection ambiguity before Rosetta sees the PDB.
-
-    Production score-only inputs are one explicit coordinate set, either bare
-    or enclosed by one well-formed MODEL/ENDMDL pair.  Silently selecting one
-    of multiple models, an alternate location, or a zero-occupancy atom would
-    """
-    model_count = 0
-    endmdl_count = 0
-    model_open = False
-    coordinate_seen = False
-    with Path(path).open() as handle:
-        for line in handle:
+def _validate_coordinate_record_envelope(
+    path: str | os.PathLike[str], *, source: PDBSource | None = None,
+) -> None:
+    """Validate MODEL, alternate-location and occupancy selection once."""
+    source = _pdb_source(path, source)
+    def validate():
+        model_count = 0
+        endmdl_count = 0
+        model_open = False
+        coordinate_seen = False
+        for line in source.lines:
             record = line[:6].strip().upper()
             if record == "MODEL":
                 if model_count or model_open:
@@ -1184,8 +1235,9 @@ def _validate_coordinate_record_envelope(path: str | os.PathLike[str]) -> None:
                     f"PDB occupancy must be finite in (0, 1] for score-only input: "
                     f"{path}: {occupancy!r}"
                 )
-    if model_open or model_count != endmdl_count:
-        raise ValueError(f"malformed MODEL/ENDMDL envelope in PDB input: {path}")
+        if model_open or model_count != endmdl_count:
+            raise ValueError(f"malformed MODEL/ENDMDL envelope in PDB input: {path}")
+    source.cached("coordinate_envelope", validate)
 
 
 def _duplicate_groups(
@@ -1207,44 +1259,33 @@ def _duplicate_groups(
 
 
 def _source_heavy_atom_identity(
-    path: str | os.PathLike[str],
-    *,
-    binder_chain: str | None,
-) -> tuple[
-    dict[tuple[str, int, str, int, str], tuple[float, float, float]],
-    list[dict[str, Any]],
-]:
-    """Return every source heavy atom using a lossless residue occurrence key.
-
-    A small class of historical receptor PDBs lost author insertion codes
-    during generation.  PyRosetta retains both consecutive pose residues even
-    though their PDBInfo keys collide.  The occurrence index distinguishes
-    those residues without changing a coordinate or choosing one record over
-    another.  This repair is intentionally limited to canonical, non-binder
-    residues; NCAA/binder collisions remain ambiguous and fail closed.
-    """
-    _validate_coordinate_record_envelope(path)
-    atoms: dict[tuple[str, int, str, int, str], tuple[float, float, float]] = {}
-    groups: dict[tuple[str, int, str], list[dict[str, Any]]] = {}
-    occurrence_counts: dict[tuple[str, int, str], int] = {}
-    current_signature: tuple[str, int, str, str] | None = None
-    current_occurrence: int | None = None
-    with Path(path).open() as handle:
-        for line in handle:
+    path: str | os.PathLike[str], *, binder_chain: str | None,
+    source: PDBSource | None = None,
+) -> tuple[dict[tuple[str, int, str, int, str], tuple[float, float, float]], list[dict[str, Any]]]:
+    """Retain the established lossless author-locator occurrence semantics."""
+    source = _pdb_source(path, source)
+    def collect():
+        _validate_coordinate_record_envelope(path, source=source)
+        atoms: dict[tuple[str, int, str, int, str], tuple[float, float, float]] = {}
+        groups: dict[tuple[str, int, str], list[dict[str, Any]]] = {}
+        occurrence_counts: dict[tuple[str, int, str], int] = {}
+        current_signature: tuple[str, int, str, str] | None = None
+        current_occurrence: int | None = None
+        for line, atom in source.records:
             if line.startswith("TER"):
                 current_signature = None
                 current_occurrence = None
                 continue
             if not line.startswith(("ATOM  ", "HETATM")):
                 continue
-            atom_name = line[12:16].strip()
+            atom_name = atom["atom"]
             element = _pdb_element(line, atom_name)
             try:
-                chain = line[21:22].strip() or " "
-                number = int(line[22:26])
-                icode = line[26:27].strip() or " "
-                residue_name = line[17:20].strip()
-                coords = (float(line[30:38]), float(line[38:46]), float(line[46:54]))
+                chain = atom["chain"]
+                number = int(atom["res_id"])
+                icode = atom["ins_code"] or " "
+                residue_name = atom["resname"]
+                coords = atom["xyz"]
             except (TypeError, ValueError) as exc:
                 raise ValueError(f"invalid coordinate record in {path}: {line.rstrip()!r}") from exc
             base_key = (chain, number, icode)
@@ -1266,32 +1307,32 @@ def _source_heavy_atom_identity(
                     f"duplicate source heavy atom within one residue occurrence in {path}: {key!r}"
                 )
             atoms[key] = coords
-    if not atoms:
-        raise ValueError(f"no source heavy atoms found in {path}")
-    duplicates = _duplicate_groups(groups)
-    for item in duplicates:
-        chain = str(item["chain"])
-        residue_names = {
-            str(occurrence["residue_name"])
-            for occurrence in item["occurrences"]
-        }
-        if binder_chain is None:
-            raise ValueError(
-                f"duplicate PDB residue identity requires an explicit binder chain: {path}: {item}"
-            )
-        if chain == str(binder_chain):
-            raise ValueError(f"duplicate binder residue identity is forbidden: {path}: {item}")
-        if not residue_names.issubset(_CANONICAL_RESIDUE_CODES):
-            raise ValueError(f"duplicate NCAA/noncanonical residue identity is forbidden: {path}: {item}")
-    return atoms, duplicates
+        if not atoms:
+            raise ValueError(f"no source heavy atoms found in {path}")
+        duplicates = _duplicate_groups(groups)
+        for item in duplicates:
+            chain = str(item["chain"])
+            residue_names = {
+                str(occurrence["residue_name"])
+                for occurrence in item["occurrences"]
+            }
+            if binder_chain is None:
+                raise ValueError(
+                    f"duplicate PDB residue identity requires an explicit binder chain: {path}: {item}"
+                )
+            if chain == str(binder_chain):
+                raise ValueError(f"duplicate binder residue identity is forbidden: {path}: {item}")
+            if not residue_names.issubset(_CANONICAL_RESIDUE_CODES):
+                raise ValueError(f"duplicate NCAA/noncanonical residue identity is forbidden: {path}: {item}")
+        return atoms, duplicates
+    return source.cached(("heavy_identity", binder_chain), collect)
 
 
 def _source_heavy_atoms(
-    path: str | os.PathLike[str],
-    *,
-    binder_chain: str | None = None,
+    path: str | os.PathLike[str], *, binder_chain: str | None = None,
+    source: PDBSource | None = None,
 ) -> dict[tuple[str, int, str, int, str], tuple[float, float, float]]:
-    atoms, _ = _source_heavy_atom_identity(path, binder_chain=binder_chain)
+    atoms, _ = _source_heavy_atom_identity(path, binder_chain=binder_chain, source=source)
     return atoms
 
 
@@ -1363,15 +1404,15 @@ def audit_input_heavy_atoms(
     pose: Any,
     *,
     binder_chain: str,
+    source: PDBSource | None = None,
 ) -> dict[str, Any]:
     """Audit heavy identity/coordinates, allowing only terminal OXT variance."""
+    prepared = _pdb_source(pdb_path, source)
     source, source_duplicates = _source_heavy_atom_identity(
-        pdb_path,
-        binder_chain=binder_chain,
+        pdb_path, binder_chain=binder_chain, source=prepared,
     )
     loaded, loaded_duplicates = _loaded_heavy_atoms(
-        pose,
-        _source_residue_keys(pdb_path),
+        pose, _source_residue_keys(pdb_path, source=prepared),
     )
     if source_duplicates != loaded_duplicates:
         raise ValueError(
@@ -1916,19 +1957,19 @@ def load_score_only_pose(
     binder_chain: str = "L",
     topology_entries: Any = None,
     silent: bool = True,
+    source: PDBSource | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     initialize_pyrosetta_score_only(silent=silent)
-    normalized = _normalized_pdb(pdb_path, binder_chain=binder_chain)
-    try:
-        pose = pr.pose_from_pdb(normalized)
-    finally:
-        os.unlink(normalized)
-    source_residue_codes = _source_residue_keys(pdb_path)
-    _strip_generated_terminal_variants(pose, source_residue_codes, _source_atom_names(pdb_path))
+    source = _pdb_source(pdb_path, source)
+    normalized = _normalized_pdb_text(pdb_path, binder_chain=binder_chain, source=source)
+    pose = pr.io.pose_from_pdbstring(normalized)
+    source_residue_codes = _source_residue_keys(pdb_path, source=source)
+    _strip_generated_terminal_variants(pose, source_residue_codes, _source_atom_names(pdb_path, source=source))
     native_runtime = _apply_native_runtime_types(
         pose,
         pdb_path,
         binder_chain=binder_chain,
+        source=source,
     )
     runtime_residue_audit = _runtime_residue_audit(
         pose,
@@ -1946,6 +1987,7 @@ def load_score_only_pose(
         pdb_path,
         pose,
         binder_chain=binder_chain,
+        source=source,
     )
     restored, validated_bonds, cleared_imported_crosslinks = restore_polymer_and_staple_bonds(
         pose,
@@ -1957,6 +1999,7 @@ def load_score_only_pose(
         pdb_path,
         pose,
         binder_chain=binder_chain,
+        source=source,
     )
     return pose, {
         "restored_bonds": restored,
@@ -2088,6 +2131,7 @@ def score_fixed_pose(
     target_chains: str | None = None,
     silent: bool = True,
     compute_noncore_diagnostics: bool = False,
+    source: PDBSource | None = None,
 ) -> dict[str, Any]:
     """Score fixed coordinates with ref2015 + reweighted_sc only.
 
@@ -2100,6 +2144,7 @@ def score_fixed_pose(
         binder_chain=binder_chain,
         topology_entries=topology_entries,
         silent=silent,
+        source=source,
     )
     coordinates_before = snapshot_coordinates(pose)
     scorefxn, scorefxn_adjustments = _score_function_for_pose(pose)

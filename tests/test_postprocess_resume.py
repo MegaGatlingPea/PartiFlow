@@ -1,4 +1,4 @@
-"""Resume checks compare real input, output, and settings values directly."""
+"""Resume uses small v2 records and treats each invocation's inputs as fixed."""
 
 from __future__ import annotations
 
@@ -59,6 +59,10 @@ def preset(threshold):
 
 class PostprocessResumeTests(unittest.TestCase):
     def setUp(self):
+        from postprocess_test_utils import inline_dispatch
+        self.dispatch_patch = patch("partiflow.postprocess.dispatch.dispatch_items", side_effect=inline_dispatch)
+        self.dispatch = self.dispatch_patch.start()
+        self.addCleanup(self.dispatch_patch.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.source = self.root / "sample1.pdb"
@@ -83,45 +87,89 @@ class PostprocessResumeTests(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         return result
 
-    def test_changed_input_values_reject_resume_without_overwriting_old_result(self):
+    def test_completed_record_keeps_settings_without_structure_payloads(self):
+        self.complete()
+        record = json.loads(self.report_path.read_text())
+        self.assertEqual(record["version"], 2)
+        self.assertEqual(set(record["resume"]), {"settings"})
+        self.assertEqual(record["resume"]["settings"]["sample_id"], "sample1")
+
+        def assert_small(value):
+            if isinstance(value, dict):
+                self.assertFalse(
+                    set(value)
+                    & {"atoms", "xyz", "coordinates", "input_state", "output_state"}
+                )
+                for child in value.values():
+                    assert_small(child)
+            elif isinstance(value, list):
+                for child in value:
+                    assert_small(child)
+
+        assert_small(record)
+
+    def test_same_path_coordinate_edits_are_not_detected_without_rerun(self):
         first = self.complete()
-        old_report = self.report_path.read_bytes()
         output = Path(first["pdb_path"])
         old_output = output.read_bytes()
-        changed_inputs = {
-            "coordinates": pdb(x=0.25),
-            "residue_identity": pdb(code="GLY"),
-            "declared_links": pdb(links="CONECT    1    3\n"),
-            "atom_inventory": pdb().replace(" O   ALA", " OXT ALA"),
-        }
-        for label, changed in changed_inputs.items():
-            with self.subTest(label=label):
-                self.source.write_text(changed)
-                with patch("partiflow.postprocess.chemistry.relax_candidate") as relax:
-                    with self.assertRaisesRegex(
-                        ValueError, "input/settings changed; use --rerun"
-                    ):
-                        process_candidates([self.item])
-                relax.assert_not_called()
-                self.assertEqual(self.source.read_text(), changed)
-                self.assertEqual(self.report_path.read_bytes(), old_report)
-                self.assertEqual(output.read_bytes(), old_output)
-        self.source.write_text(pdb())
+        self.source.write_text(pdb(x=0.25))
+        self.dispatch.reset_mock()
+        with (
+            patch("partiflow.postprocess.source.PDBSource.read") as read,
+            patch("partiflow.postprocess.runner.PostprocessWorker") as worker,
+            patch("partiflow.postprocess.chemistry.relax_candidate") as relax,
+        ):
+            second = process_candidates([self.item])[0]
+        self.dispatch.assert_not_called()
+        read.assert_not_called()
+        worker.assert_not_called()
+        relax.assert_not_called()
+        self.assertTrue(second["resumed"])
+        self.assertEqual(self.source.read_text(), pdb(x=0.25))
+        self.assertEqual(output.read_bytes(), old_output)
 
-    def test_changed_output_rejects_resume_and_keeps_old_report(self):
+    def test_existing_output_coordinate_edits_are_not_rescanned(self):
         first = self.complete()
-        old_report = self.report_path.read_bytes()
         output = Path(first["pdb_path"])
         changed = pdb(x=1.0)
         output.write_text(changed)
-        with patch("partiflow.postprocess.chemistry.relax_candidate") as relax:
-            with self.assertRaisesRegex(
-                ValueError, "input/settings changed; use --rerun"
-            ):
-                process_candidates([self.item])
+        self.dispatch.reset_mock()
+        with (
+            patch("partiflow.postprocess.source.PDBSource.read") as read,
+            patch("partiflow.postprocess.chemistry.relax_candidate") as relax,
+        ):
+            second = process_candidates([self.item])[0]
+        self.dispatch.assert_not_called()
+        read.assert_not_called()
         relax.assert_not_called()
-        self.assertEqual(self.report_path.read_bytes(), old_report)
+        self.assertTrue(second["resumed"])
         self.assertEqual(output.read_text(), changed)
+
+    def test_missing_output_rejects_resume_without_replacing_report(self):
+        first = self.complete()
+        old_report = self.report_path.read_bytes()
+        output = Path(first["pdb_path"])
+        output.unlink()
+        self.dispatch.reset_mock()
+        with self.assertRaisesRegex(ValueError, "input/settings changed; use --rerun"):
+            process_candidates([self.item])
+        self.dispatch.assert_not_called()
+        self.assertEqual(self.report_path.read_bytes(), old_report)
+        self.assertFalse(output.exists())
+
+    def test_old_record_version_requires_explicit_rerun(self):
+        first = self.complete()
+        record = json.loads(self.report_path.read_text())
+        record["version"] = 1
+        self.report_path.write_text(json.dumps(record))
+        old_report = self.report_path.read_bytes()
+        old_output = Path(first["pdb_path"]).read_bytes()
+        self.dispatch.reset_mock()
+        with self.assertRaisesRegex(ValueError, "input/settings changed; use --rerun"):
+            process_candidates([self.item])
+        self.dispatch.assert_not_called()
+        self.assertEqual(self.report_path.read_bytes(), old_report)
+        self.assertEqual(Path(first["pdb_path"]).read_bytes(), old_output)
 
     def test_changed_execution_settings_reject_resume_without_replacing_report(self):
         first = self.complete()
@@ -129,10 +177,16 @@ class PostprocessResumeTests(unittest.TestCase):
         old_output = Path(first["pdb_path"]).read_bytes()
         variants = (
             ("backend", self.item, {"method": "openmm"}),
-            ("mode", self.item, {"relax_mode": "global"}),
-            ("subset", self.item, {"relax_subset": "all"}),
+            ("mode", self.item, {"relax_mode": "local"}),
+            ("subset", self.item, {"relax_subset": "nbrs"}),
             ("iterations", self.item, {"relax_max_iter": 7}),
+            ("seed", self.item, {"seed": 1227}),
+            ("platform", self.item, {"platform": "CUDA"}),
             ("chain", replace(self.item, binder_chain="B"), {}),
+            ("task_identity", replace(self.item, task_name="another_task"), {}),
+            ("sample_identity", replace(self.item, sample_id="another_sample"), {}),
+            ("candidate_identity", replace(self.item, candidate_id="candidate2"), {}),
+            ("base_identity", replace(self.item, base_sample_id=2), {}),
             (
                 "topology",
                 replace(
@@ -146,11 +200,13 @@ class PostprocessResumeTests(unittest.TestCase):
         )
         for label, item, options in variants:
             with self.subTest(label=label):
+                self.dispatch.reset_mock()
                 with patch("partiflow.postprocess.chemistry.relax_candidate") as relax:
                     with self.assertRaisesRegex(
                         ValueError, "input/settings changed; use --rerun"
                     ):
                         process_candidates([item], **options)
+                self.dispatch.assert_not_called()
                 relax.assert_not_called()
                 self.assertEqual(self.report_path.read_bytes(), old_report)
                 self.assertEqual(Path(first["pdb_path"]).read_bytes(), old_output)
@@ -166,6 +222,42 @@ class PostprocessResumeTests(unittest.TestCase):
         self.assertEqual(second["status"], "success")
         self.assertEqual(Path(first["pdb_path"]).read_bytes(), self.source.read_bytes())
 
+    def test_batch_preflight_rejects_later_mismatch_before_any_report_write(self):
+        other_source = self.root / "sample2.pdb"
+        other_source.write_text(pdb(x=2.0))
+        other = replace(self.item, path=other_source, sample_id="sample2")
+        with (
+            patch("partiflow.common.presets.load_presets", return_value=preset(0.6)),
+            patch("partiflow.postprocess.metrics.compute_metrics", return_value=metric_report()),
+            patch("partiflow.postprocess.chemistry.relax_candidate", side_effect=copy_relax),
+        ):
+            process_candidates([self.item, other], filter=True, criteria=["test"])
+        fresh_source = self.root / "sample3.pdb"
+        fresh_source.write_text(pdb(x=3.0))
+        fresh = replace(self.item, path=fresh_source, sample_id="sample3")
+        saved = {path: path.read_bytes() for path in self.reports.rglob("*") if path.is_file()}
+        self.dispatch.reset_mock()
+        with (
+            patch("partiflow.common.presets.load_presets", return_value=preset(0.8)),
+            patch("partiflow.postprocess.runner._write_json") as write,
+            patch("partiflow.postprocess.metrics.compute_metrics") as metrics,
+            patch("partiflow.postprocess.runner.PostprocessWorker") as worker,
+        ):
+            with self.assertRaisesRegex(ValueError, "input/settings changed; use --rerun"):
+                process_candidates(
+                    [self.item, fresh, replace(other, binder_chain="B")],
+                    filter=True,
+                    criteria=["test"],
+                )
+        self.dispatch.assert_not_called()
+        write.assert_not_called()
+        metrics.assert_not_called()
+        worker.assert_not_called()
+        self.assertEqual(
+            {path: path.read_bytes() for path in self.reports.rglob("*") if path.is_file()},
+            saved,
+        )
+
     def test_preset_only_refilter_reuses_geometry_and_metrics(self):
         with (
             patch("partiflow.common.presets.load_presets", return_value=preset(0.6)),
@@ -178,14 +270,20 @@ class PostprocessResumeTests(unittest.TestCase):
         self.assertEqual(first["filter_status"], "passed")
         metrics.assert_called_once()
         old_output = Path(first["pdb_path"]).read_bytes()
+        self.dispatch.reset_mock()
         with (
             patch("partiflow.common.presets.load_presets", return_value=preset(0.8)),
             patch("partiflow.postprocess.metrics.compute_metrics") as metrics,
             patch("partiflow.postprocess.chemistry.relax_candidate") as relax,
+            patch("partiflow.postprocess.runner.PostprocessWorker") as worker,
+            patch("partiflow.postprocess.source.PDBSource.read") as read,
         ):
             second = process_candidates([self.item], filter=True, criteria=["test"])[0]
         relax.assert_not_called()
         metrics.assert_not_called()
+        worker.assert_not_called()
+        read.assert_not_called()
+        self.dispatch.assert_not_called()
         self.assertTrue(second["resumed"])
         self.assertEqual(second["filter_status"], "failed")
         self.assertEqual(set(second["decisions"]), {"test"})
@@ -193,6 +291,29 @@ class PostprocessResumeTests(unittest.TestCase):
         self.assertEqual(
             json.loads(self.report_path.read_text())["filter_status"], "failed"
         )
+
+    def test_enabling_filter_dispatches_only_metrics_for_saved_geometry(self):
+        first = self.complete()
+        old_output = Path(first["pdb_path"]).read_bytes()
+        self.dispatch.reset_mock()
+        with (
+            patch("partiflow.common.presets.load_presets", return_value=preset(0.6)),
+            patch(
+                "partiflow.postprocess.metrics.compute_metrics",
+                return_value=metric_report(),
+            ) as metrics,
+            patch("partiflow.postprocess.chemistry.relax_candidate") as relax,
+            patch("partiflow.postprocess.source.PDBSource.read") as read,
+        ):
+            second = process_candidates([self.item], filter=True, criteria=["test"])[0]
+        self.dispatch.assert_called_once()
+        self.assertFalse(self.dispatch.call_args.args[0][0].needs_gpu)
+        metrics.assert_called_once()
+        relax.assert_not_called()
+        read.assert_not_called()
+        self.assertTrue(second["resumed"])
+        self.assertEqual(second["filter_status"], "passed")
+        self.assertEqual(Path(second["pdb_path"]).read_bytes(), old_output)
 
     def test_buns_setting_change_recomputes_metrics_once_without_geometry(self):
         with (

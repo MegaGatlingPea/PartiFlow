@@ -13,7 +13,7 @@ Read the sections relevant to the current task. All project paths are relative t
 | Paired validation and restoration | `partiflow/workflows/validate.py` and neighboring `af2.py`; `configs/validate.yaml` |
 | Filtering semantics | `partiflow/common/presets.py`, `configs/preset.yaml` |
 | Training, EMA, and compilation | `partiflow/training/`, `partiflow/utils/ema_callback.py` |
-| Production postprocessing and native NCAA | `partiflow/postprocess/`, `partiflow/utils/nonstandard_residue_registry.py` |
+| Production postprocessing and native NCAA | `partiflow/postprocess/` (`runner.py`, `dispatch.py`, `source.py`, `chemistry.py`, `metrics.py`, `native.py`); `partiflow/utils/nonstandard_residue_registry.py` |
 | Installed resources and wheel packaging | `partiflow/paths.py`, `partiflow/download.py`, `pyproject.toml`, and the active build configuration |
 
 ## Task and Result Contracts
@@ -42,11 +42,13 @@ Compute reward before task postprocessing. CSV reward values remain predictions 
 
 ## Cached Results and Restoration
 
-Before restoration, directly compare current structure contents, residue and atom identities, chains and insertion codes, coordinates, topology, and effective configuration. External PSSM/tied files currently use path, size, and modification-time checks. Models currently record root paths and execution configuration; those checks do not compare all resource contents or weight tensors. Read and compare old plans and states before writing replacements. Do not overwrite an old plan to erase a mismatch.
+For validation restoration, directly compare current structure contents, residue and atom identities, chains and insertion codes, coordinates, topology, and effective configuration. External PSSM/tied files currently use path, size, and modification-time checks. Models currently record root paths and execution configuration; those checks do not compare all resource contents or weight tensors. Read and compare old plans and states before writing replacements. Do not overwrite an old plan to erase a mismatch.
 
 Validation restores completed slots only when input and protocol agree. For changed input or protocol, use the current CLI's `--rerun` semantics. `--plan`, `--refilter`, and `--recompute-metrics` are mutually exclusive. The latter two process saved results without running AF2 or MPNN; missing predictions remain incomplete. Do not combine `--rerun` with either update mode. Currently, `--plan` returns before writing: it establishes plan compatibility, not prediction completeness. Refiltering or recomputing updates slots, metrics, decisions, and state reports while retaining design structures and prediction PDB/NPZ files. Recheck execution paths when implementation changes.
 
-Postprocessing must also compare source structures, effective backend, topology, and output identities. Failed or old results must not hide the backend requested by a new run. Verify restored output identities and coordinates directly, and publish completed output files atomically.
+Postprocessing uses version 2 lightweight records. Compare effective settings, identity metadata, topology, and the published output location before reuse, and require the output to exist. Failed or old results must not hide the backend requested by a new run. Do not retain full input/output atom and coordinate copies in the records. Inputs are fixed for an invocation; external edits at the same path require explicit `--rerun`, and same-path coordinate changes are not automatically detected. Document this boundary rather than adding a replacement content-tracking mechanism. Earlier report layouts require explicit rerun and are not migrated automatically.
+
+Changing from `filter: false` to `filter: true` reuses completed geometry. Threshold-only preset changes reuse stored metrics for rejudging. A metric-stage native crash retains already published geometry and marks missing metrics unavailable; a later invocation can finish scoring without relaxing that geometry again.
 
 ## Training, Checkpoints, and Compilation
 
@@ -61,9 +63,19 @@ Postprocessing must also compare source structures, effective backend, topology,
 
 Preserve production OpenMM/PyRosetta routing and mandatory chemical restoration. Select applicability for standard residues, cyclization, disulfides, and broader nonstandard chemistry through `partiflow/postprocess/chemistry.py`. Required restoration of special chemistry must not be skipped because `postprocess: false` is set.
 
+The default standard-peptide protocol is `beta_nov16`, global backbone and side-chain mobility, fixed jumps, repacking without sequence design, one FastRelax repeat, and 200 maximum minimizer iterations. Add no coordinate or motif restraints. Preserve the existing head-to-tail and disulfide construction, required relaxation penalties, geometry checks, and PDB connection serialization; relaxation penalties must not enter the reported base metric energies. Keep explicit mobility and iteration overrides functional.
+
+Standalone postprocessing shares one persistent Ray pool across selected tasks. Use `workers` as the concurrency cap, `threads` as the per-actor CPU budget, and the configured seed/timeout. Workers retain an immutable SDK profile: `standard_beta` for standard Rosetta work and `native_ref2015` for OpenMM/native NCAA scoring. Keep their processes separate because beta correction flags change global chemical parameters. Reset the Rosetta random stream per sample. Unfiltered OpenMM actors in the `native_ref2015` profile do not initialize its scoring SDK.
+
+Pass one process-local PDB source/context through identity extraction, backend preparation, locator updates, and scoring. Reuse a standard sample's relaxed Pose; construct the native NCAA scoring Pose once after OpenMM. Cache immutable native parameter/alias data and matching OpenMM ForceField definitions. Build Systems and Contexts for the actual structure instead of reusing them across incompatible topologies. OpenMM CPUThreads must follow the configured per-worker thread budget.
+
 `partiflow/postprocess/rosetta_ncaa/support_matrix.csv` currently lists 45 entries supporting native scoring at fixed coordinates; none claims Rosetta relaxation or packing support. Check the source atom graph, formal and net charge, connectivity, aliases/native patches, and actual residue identity. Score-only execution must not pack, relax, or minimize. Do not replace NCAA with canonical approximations.
 
 BAL uses the native B3G beta backbone. The current default `LayerSelector` path has caused a native crash for this type, so the implementation marks `surface_hydrophobicity` as unavailable. This limits the current implementation path; it does not establish that all Rosetta surface calculations reject beta backbones. Preserve other computable metrics and keep missing values `unavailable`. The default interface preset requires this metric, so it cannot pass when the metric is missing. Computable energy or interface metrics do not establish physical quality.
+
+Calculate the selected PartiFlow preset's required metrics and dependencies. Its default remains the existing four-rule `rosetta_bindcraft_peptide` preset, with thresholds and strict comparison operators from `configs/preset.yaml`; the standard protocol change does not import another project's additional rules. Keep full native energy entry points available for explicit chemistry checks.
+
+Publish completed geometry and a small record before optional native metrics, so a C++ metric crash cannot erase successful relaxation. Keep process-local source and Pose objects out of Ray results and saved records. Preserve task-level `result.csv` publication/rollback: earlier successfully published tasks survive a later task's publication failure, while concurrent uncommitted work is stopped before rollback. Scientific filter failure retains the structure. Preserve the public identity, constraint locators, reward values, and ranks.
 
 ## Focused Validation and Releases
 
@@ -73,7 +85,7 @@ Choose existing tests relevant to the change. This table is a routing aid, not a
 | --- | --- |
 | CLI and output | `test_cli_public.py`, `test_design_contract.py`, `test_workflow_contract.py` |
 | Reward, sequence, and AF2 | `test_reward_configuration.py`, `test_reward_candidate_failure.py`, `test_sequence_schema.py`, `test_af2_contract.py` |
-| Cached results and postprocessing | `test_validate_structure_state.py`, `test_postprocess_resume.py`, `test_postprocess_backend_override.py`, `test_postprocess_publication.py` |
+| Cached results and postprocessing | `test_validate_structure_state.py`, `test_postprocess_resume.py`, `test_postprocess_backend_override.py`, `test_postprocess_publication.py`, `test_postprocess_dispatch.py` |
 | Training | `test_training_contract.py`, `test_training_epoch_resume.py`, `test_training_compile.py`, `test_data_contract.py` |
 | Native chemistry | `test_native_sources.py`, `test_native_acceptance.py`, `test_postprocess_metrics.py`, `test_postprocess_routing.py` |
 | Packaging | `test_package_resources.py`, `test_wheel_records.py`, `test_download_assets.py` |

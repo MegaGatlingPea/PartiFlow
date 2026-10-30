@@ -41,6 +41,6 @@ postprocess_runtime:
   keep_original: false
   require_success: false
   use_ray: null
-  relax_mode: local
+  relax_mode: global
   relax_subset: null
-  relax_max_iter: null
+  relax_max_iter: 200

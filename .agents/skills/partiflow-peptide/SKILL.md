@@ -30,6 +30,14 @@ The public entry point is `partiflow`, with these seven commands. Confirm argume
 
 For `train` and `design`, `--show-config` validates configuration resolution only. The default for `postprocess` is `--filter false`. Thresholds come exclusively from the selected `configs/preset.yaml` or `--presets` file.
 
+Postprocessing defaults to a shared persistent Ray pool, with runtime resource
+settings in `configs/postprocess.yaml`. Standard peptides use the
+`beta_nov16` global relaxation protocol; OpenMM and native NCAA scoring retain
+their separate chemistry paths and immutable SDK profiles. Preserve disulfide
+and head-to-tail support and the existing four-rule peptide filter preset.
+Lightweight postprocess records require `--rerun` after an external same-path
+structure edit; they do not automatically detect coordinate changes.
+
 For output contracts, reward, cached-result restoration, training, compilation, noncanonical amino acids (NCAA), or packaging, read the relevant sections of [Development and Validation](references/development.md). That reference identifies implementation files and focused tests.
 
 ## Validation and Delivery

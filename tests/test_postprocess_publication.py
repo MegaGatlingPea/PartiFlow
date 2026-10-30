@@ -33,6 +33,10 @@ def relax(item, output, **options):
 
 class PostprocessPublicationTests(unittest.TestCase):
     def setUp(self):
+        from postprocess_test_utils import inline_dispatch
+        self.dispatch_patch = patch("partiflow.postprocess.dispatch.dispatch_items", side_effect=inline_dispatch)
+        self.dispatch = self.dispatch_patch.start()
+        self.addCleanup(self.dispatch_patch.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
 
@@ -226,14 +230,31 @@ class PostprocessPublicationTests(unittest.TestCase):
         self.assertEqual(read_results(task / "result.csv")[1][1]["error"], "")
         self.assert_no_backups(task)
 
-    def test_later_task_csv_failure_keeps_committed_task_and_leaves_next_task(self):
+    def test_out_of_order_csv_failure_keeps_committed_task_and_rolls_back_pending(self):
         first, _ = self.make_task("a_task")
         second, _ = self.make_task("b_task", count=2)
-        third, _ = self.make_task("c_task")
+        third, _ = self.make_task("c_task", count=2)
         first_original = self.files(first)
         second_original = self.files(second)
         third_original = self.files(third)
+        callbacks = []
+
+        def out_of_order(items, settings, *, on_result=None, **kwargs):
+            from partiflow.postprocess.runner import _process_one
+
+            self.assertEqual(len(items), 5)
+            results = [None] * len(items)
+            for index in (3, 1, 0, 2, 4):
+                result = _process_one(items[index], settings)
+                results[index] = result
+                callbacks.append(index)
+                on_result(index, result)
+            return results, []
+
         with (
+            patch(
+                "partiflow.postprocess.dispatch.dispatch_items", side_effect=out_of_order
+            ) as dispatch,
             patch(
                 "partiflow.postprocess.chemistry.relax_candidate", side_effect=relax
             ) as backend,
@@ -244,9 +265,11 @@ class PostprocessPublicationTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(OSError, "CSV publication failed"):
                 run_postprocess_for_run(self.root)
+        dispatch.assert_called_once()
+        self.assertEqual(callbacks, [3, 1, 0, 2])
         self.assertEqual(
             [call.args[0].task_name for call in backend.call_args_list],
-            ["a_task", "b_task", "b_task"],
+            ["c_task", "b_task", "a_task", "b_task"],
         )
         self.assertNotEqual(self.files(first), first_original)
         self.assertEqual(
@@ -259,6 +282,31 @@ class PostprocessPublicationTests(unittest.TestCase):
         self.assertEqual(self.files(second), second_original)
         self.assertEqual(self.files(third), third_original)
         for task in (first, second, third):
+            self.assert_no_backups(task)
+
+    def test_later_task_resume_mismatch_prevents_all_report_and_csv_updates(self):
+        first, _ = self.make_task("a_task")
+        second, _ = self.make_task("b_task")
+        with patch("partiflow.postprocess.chemistry.relax_candidate", side_effect=relax):
+            run_postprocess_for_run(self.root)
+        state = second / ".state" / "design.json"
+        state.parent.mkdir()
+        state.write_text(json.dumps({"samples": [{"filename": "sample1.pdb", "binder_chain": "B"}]}))
+        original = {task: self.files(task) for task in (first, second)}
+        self.dispatch.reset_mock()
+        with (
+            patch("partiflow.postprocess.runner._write_json") as write_report,
+            patch("partiflow.postprocess.runner.write_results") as write_csv,
+            patch("partiflow.postprocess.runner.PostprocessWorker") as worker,
+        ):
+            with self.assertRaisesRegex(ValueError, "input/settings changed; use --rerun"):
+                run_postprocess_for_run(self.root)
+        self.dispatch.assert_not_called()
+        write_report.assert_not_called()
+        write_csv.assert_not_called()
+        worker.assert_not_called()
+        for task in (first, second):
+            self.assertEqual(self.files(task), original[task])
             self.assert_no_backups(task)
 
     def test_successful_tasks_return_collected_order(self):

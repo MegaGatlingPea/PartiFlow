@@ -1,10 +1,17 @@
 method: auto
 platform: CPU
-relax_mode: local
+relax_mode: global
 relax_subset: null
-relax_max_iter: null
+relax_max_iter: 200
 relax_linear: true
-use_ray: false
+use_ray: true
 filter: false
 compute_buns: true
-criteria: [rosetta_bindcraft_peptide]
+criteria:
+- rosetta_bindcraft_peptide
+workers: null
+threads: 1
+seed: 2026
+timeout: 1800
+scorefunction: beta_nov16
+relax_repeats: 1

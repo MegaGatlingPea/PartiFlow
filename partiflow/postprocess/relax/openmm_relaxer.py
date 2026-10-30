@@ -67,10 +67,21 @@ def _build_filtered_forcefield_xml(residue_names_key: tuple[str, ...]) -> str:
     return handle.name
 
 
+@lru_cache(maxsize=8)
+def _forcefield_for_residues(residue_names_key: tuple[str, ...]):
+    """Reuse immutable force-field definitions within one serial worker."""
+    if residue_names_key:
+        return openmm_app.ForceField(
+            "amber14-all.xml", _build_filtered_forcefield_xml(residue_names_key)
+        )
+    return openmm_app.ForceField("amber14-all.xml")
+
+
 def run_topology_relax(
     fix_result: Any,
     *,
     platform: str = "CUDA",
+    threads: int | None = None,
     stiffness: float = 10.0,
     max_iterations: int = 0,
     tolerance: Any = 2.39 * unit.kilocalories_per_mole,
@@ -117,11 +128,7 @@ def run_topology_relax(
         if residue.name in _STAPLED_CTERM_TEMPLATE and residue in c_terminal_residues and "OXT" in atom_names:
             custom_residue_names.add(_STAPLED_CTERM_TEMPLATE[residue.name])
 
-    if custom_residue_names:
-        extra_xml = _build_filtered_forcefield_xml(tuple(sorted(custom_residue_names)))
-        force_field = openmm_app.ForceField("amber14-all.xml", extra_xml)
-    else:
-        force_field = openmm_app.ForceField("amber14-all.xml")
+    force_field = _forcefield_for_residues(tuple(sorted(custom_residue_names)))
 
     for residue in topology.residues():
         atom_names = {a.name for a in residue.atoms()}
@@ -173,7 +180,14 @@ def run_topology_relax(
 
     integrator = openmm.LangevinIntegrator(0, 0.01, 0.0)
     platform_obj = openmm.Platform.getPlatformByName(platform)
-    simulation = openmm_app.Simulation(topology, system, integrator, platform_obj)
+    properties = {}
+    if str(platform).upper() == "CPU" and threads is not None:
+        if type(threads) is not int or threads < 1:
+            raise ValueError("OpenMM CPU threads must be a positive integer")
+        properties["Threads"] = str(threads)
+    simulation = openmm_app.Simulation(
+        topology, system, integrator, platform_obj, platformProperties=properties
+    )
     simulation.context.setPositions(positions)
 
     state = simulation.context.getState(getEnergy=True)

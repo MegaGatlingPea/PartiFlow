@@ -75,7 +75,7 @@ def parser():
     )
     postprocess.add_argument("paths", nargs="+", type=Path)
     postprocess.add_argument(
-        "--filter", type=boolean, default=False, metavar="{true,false}"
+        "--filter", type=boolean, default=None, metavar="{true,false}"
     )
     postprocess.add_argument("--config", type=Path)
     postprocess.add_argument("--task", action="append")

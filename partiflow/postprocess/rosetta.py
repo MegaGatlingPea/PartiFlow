@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 import json
 import os
+from pathlib import Path
+import shlex
+import threading
 import traceback
 from typing import Any, Iterable, Literal, Optional
 
@@ -37,6 +40,70 @@ _HEAD_TAIL_MIN_DISTANCE = 1.1
 _HEAD_TAIL_MAX_DISTANCE = 1.7
 _DISULFIDE_MIN_DISTANCE = 1.7
 _DISULFIDE_MAX_DISTANCE = 2.3
+_STANDARD_BETA_LOCK = threading.Lock()
+_STANDARD_BETA_INITIALIZED = False
+
+
+def _beta_profile_enabled() -> bool:
+    return bool(pr.rosetta.basic.options.get_boolean_option("corrections:beta_nov16"))
+
+
+def initialize_standard_beta(*, seed: int = 2026, threads: int = 1) -> None:
+    """Initialize one immutable standard-residue Beta SDK per worker process."""
+    global _STANDARD_BETA_INITIALIZED
+    if type(seed) is not int or seed < 0:
+        raise ValueError("seed must be a nonnegative integer")
+    if type(threads) is not int or threads < 1:
+        raise ValueError("threads must be a positive integer")
+    with _STANDARD_BETA_LOCK:
+        if pr.rosetta.basic.was_init_called():
+            if not _beta_profile_enabled():
+                raise RuntimeError("standard_beta requires a separate Beta-initialized worker")
+        else:
+            options = [
+                "-mute all", "-corrections::beta_nov16 true",
+                "-relax:default_repeats 1", "-constant_seed", f"-jran {seed}",
+                f"-multithreading:total_threads {threads}",
+                "-ignore_unrecognized_res false", "-ignore_zero_occupancy true",
+                "-holes:dalphaball " + shlex.quote(str(Path(__file__).parent / "bin" / "DAlphaBall.gcc")),
+            ]
+            pr.init(" ".join(options), silent=True)
+            if not _beta_profile_enabled():
+                raise RuntimeError("standard_beta initialization did not enable Beta corrections")
+        _STANDARD_BETA_INITIALIZED = True
+
+
+def seed_metrics(seed: int) -> None:
+    """Use a sample-order-independent random origin for metric calculations."""
+    pr.rosetta.numeric.random.rg().set_seed(int(seed))
+
+
+def load_standard_pose(source: Any, *, binder_chain: str = "L", topology_entries: Any = None):
+    """Load a prepared standard PDB and restore PF chemical connections once."""
+    from partiflow.postprocess.records import STANDARD, STANDARD_ALIASES
+    bad = sorted({atom["resname"] for atom in source.atoms
+                  if STANDARD_ALIASES.get(atom["resname"], atom["resname"]) not in STANDARD})
+    if bad:
+        raise ValueError("standard_beta cannot load nonstandard residues: " + ", ".join(bad))
+    if not _beta_profile_enabled():
+        raise RuntimeError("standard PDB loading requires an initialized standard_beta worker")
+    lines = []
+    for line in source.lines:
+        if line.startswith(("LINK", "CONECT")):
+            continue
+        if line.startswith(("ATOM  ", "HETATM")):
+            name = line[17:20].strip()
+            normalized = STANDARD_ALIASES.get(name, name)
+            if normalized != name:
+                line = line[:17] + f"{normalized:>3s}" + line[20:]
+        lines.append(line)
+    pose = pr.io.pose_from_pdbstring("\n".join(lines) + "\n")
+    cyclization = None
+    if should_cyclize_binder(pose, binder_chain=binder_chain, topology_entries=topology_entries):
+        cyclization = cyclize_head_tail_binder_pose(pose, binder_chain=binder_chain)
+    disulfides = apply_disulfide_topology_to_pose(
+        pose, binder_chain=binder_chain, topology_entries=topology_entries)
+    return pose, {"cyclization": cyclization, "disulfides": disulfides}
 
 def _set_interface_analyzer_interface(iam: InterfaceAnalyzerMover, interface: str) -> None:
     """Set InterfaceAnalyzerMover interface across old and new PyRosetta APIs."""
@@ -822,108 +889,89 @@ def interface_residues_by_distance(
 
 
 def get_scorefxn(scorefxn_name: str):
-    """
-    Gets the scorefxn with appropriate corrections.
-    """
-    corrections = {
-        'beta_july15': False,
-        'beta_nov16': False,
-        'gen_potential': False,
-        'restore_talaris_behavior': False,
-    }
-    if 'beta_july15' in scorefxn_name or 'beta_nov15' in scorefxn_name:
-        corrections['beta_july15'] = True
-    elif 'beta_nov16' in scorefxn_name:
-        corrections['beta_nov16'] = True
-    elif 'genpot' in scorefxn_name:
-        corrections['gen_potential'] = True
-        pr.rosetta.basic.options.set_boolean_option('corrections:beta_july15', True)
-    elif 'talaris' in scorefxn_name:
-        corrections['restore_talaris_behavior'] = True
-    for corr, value in corrections.items():
-        pr.rosetta.basic.options.set_boolean_option(f'corrections:{corr}', value)
-    return pr.create_score_function(scorefxn_name)
+    """Clone weights in the worker's fixed chemical profile; never switch flags."""
+    name = str(scorefxn_name)
+    requested_beta = "beta_nov16" in name
+    active_beta = _beta_profile_enabled()
+    if requested_beta != active_beta:
+        raise RuntimeError("scorefunction requires a different immutable SDK worker profile")
+    return pr.create_score_function(name)
 
 
 def fast_relax_pose2(
     pose: Any,
     *,
     binder_chains: str = "L",
-    scorefxn: Literal["ref2015"] | str = "ref2015",
-    max_iter: int = 1000,
-    subset: Literal["all", "nbrs", "target"] = "nbrs",
+    scorefxn: str = "beta_nov16",
+    max_iter: int = 200,
+    repeats: int = 1,
+    subset: Literal["all", "nbrs", "target"] = "all",
     move_bb: bool = True,
     cyclic_first_idx: int | None = None,
     cyclic_last_idx: int | None = None,
+    topology_constraints: bool | None = None,
 ) -> None:
-    """Advanced FastRelax using TaskFactory and MoveMapFactory to restrict
-    packing and minimization to specific subsets (all, nbrs, or target).
-    Mutates `pose` in-place.
+    """One repeat of repacking-only relaxation in the fixed SDK profile.
 
-    When cyclic_first_idx/cyclic_last_idx are provided, applies Rosetta's native
-    cutpoint-patch mechanism to enforce correct peptide-bond geometry at the
-    head-to-tail junction during relax.
+    The global default permits all backbone and sidechain torsions while fixing
+    rigid-body jumps. Closure penalties belong only to the relax score clone.
+    Explicit local subset and iteration overrides remain supported.
     """
+    if subset not in {"all", "nbrs", "target"}:
+        raise ValueError(f"Unsupported relax subset: {subset}")
+    if type(max_iter) is not int or max_iter < 1:
+        raise ValueError("max_iter must be a positive integer")
+    if type(repeats) is not int or repeats < 1:
+        raise ValueError("repeats must be a positive integer")
+    start_pose = pose.clone() if subset == "all" else None
+    original_constraints = pose.constraint_set().clone()
+    scorefxn_obj = get_scorefxn(str(scorefxn)).clone()
     cyclic = cyclic_first_idx is not None and cyclic_last_idx is not None
     if cyclic:
         add_cyclic_peptide_bond_constraints(
-            pose,
-            first_idx=int(cyclic_first_idx),
-            last_idx=int(cyclic_last_idx),
-        )
-
-    fastrelax = FastRelax()
-
-    if subset == 'all':
-        fastrelax.constrain_relax_to_start_coords(True)
-
-    sfxn_name = str(scorefxn)
-    if cyclic and sfxn_name == "ref2015":
-        sfxn_name = "ref2015_cst"
-    scorefxn_obj = get_scorefxn(sfxn_name)
-    fastrelax.set_scorefxn(scorefxn_obj)
-    fastrelax.max_iter(int(max_iter))
+            pose, first_idx=int(cyclic_first_idx), last_idx=int(cyclic_last_idx))
+    constrained = bool(pose.constraint_set().get_all_constraints())
+    if cyclic or constrained or topology_constraints:
+        scorefxn_obj.set_weight(pr.rosetta.core.scoring.atom_pair_constraint, 1.0)
+    fastrelax = FastRelax(scorefxn_obj, repeats)
+    fastrelax.max_iter(max_iter)
+    fastrelax.min_type("lbfgs_armijo_nonmonotone")
+    fastrelax.constrain_relax_to_start_coords(False)
     tf = TaskFactory()
-    tf.push_back(operation.InitializeFromCommandline())
     tf.push_back(operation.RestrictToRepacking())
-    chain_ids = _parse_chain_ids(binder_chains)
-    if subset != 'all':
-        chain_selectors = [selections.ChainSelector(c) for c in chain_ids]
-        if len(chain_selectors) == 1:
-            gen_selector = chain_selectors[0]
-        elif len(chain_selectors) > 1:
-            gen_selector = selections.OrResidueSelector(chain_selectors[0], chain_selectors[1])
-            for selector in chain_selectors[2:]:
-                gen_selector = selections.OrResidueSelector(gen_selector, selector)
-        else:
-            gen_selector = selections.TrueResidueSelector()
-        nbr_selector = selections.NeighborhoodResidueSelector()
-        nbr_selector.set_focus_selector(gen_selector)
-        nbr_selector.set_include_focus_in_subset(True)
-        if subset == 'nbrs':
-            subset_selector = nbr_selector
-        elif subset == 'target':
-            subset_selector = gen_selector
-        else:
-            subset_selector = nbr_selector
-        prevent_repacking_rlt = operation.PreventRepackingRLT()
-        prevent_subset_repacking = operation.OperateOnResidueSubset(
-            prevent_repacking_rlt,
-            subset_selector,
-            flip_subset=True,
-        )
-        tf.push_back(prevent_subset_repacking)
+    if subset == "all":
+        mm = MoveMap()
+        mm.set_bb(bool(move_bb))
+        mm.set_chi(True)
     else:
-        gen_selector = selections.TrueResidueSelector()
-        subset_selector = selections.TrueResidueSelector()
-    mmf = MoveMapFactory()
-    if move_bb:
-        mmf.add_bb_action(move_map_action.mm_enable, gen_selector)
-    mmf.add_chi_action(move_map_action.mm_enable, subset_selector)
-    mm = mmf.create_movemap_from_pose(pose)
+        selectors = [selections.ChainSelector(c) for c in _parse_chain_ids(binder_chains)]
+        gen_selector = selectors[0] if selectors else selections.TrueResidueSelector()
+        for selector in selectors[1:]:
+            gen_selector = selections.OrResidueSelector(gen_selector, selector)
+        neighbors = selections.NeighborhoodResidueSelector()
+        neighbors.set_focus_selector(gen_selector)
+        neighbors.set_include_focus_in_subset(True)
+        movable = neighbors if subset == "nbrs" else gen_selector
+        tf.push_back(operation.OperateOnResidueSubset(
+            operation.PreventRepackingRLT(), movable, flip_subset=True))
+        mmf = MoveMapFactory()
+        if move_bb:
+            mmf.add_bb_action(move_map_action.mm_enable, gen_selector)
+        mmf.add_chi_action(move_map_action.mm_enable, movable)
+        mm = mmf.create_movemap_from_pose(pose)
+    mm.set_jump(False)
     fastrelax.set_movemap(mm)
     fastrelax.set_task_factory(tf)
-    fastrelax.apply(pose)
+    try:
+        fastrelax.apply(pose)
+    finally:
+        pose.constraint_set(original_constraints)
+    if start_pose is not None:
+        align = pr.rosetta.protocols.simple_moves.AlignChainMover()
+        align.source_chain(0)
+        align.target_chain(0)
+        align.pose(start_pose)
+        align.apply(pose)
     return None
 
 
@@ -1028,6 +1076,270 @@ def resolve_relax_settings(
     return subset, max_iter
 
 
+def _metric_binder_pose(pose: Any, binder_chain: str) -> Any:
+    indices = pr.rosetta.utility.vector1_unsigned_long()
+    for index in _binder_pose_indices(pose, binder_chain=binder_chain):
+        indices.append(index)
+    binder = pr.Pose()
+    pr.rosetta.core.io.pose_from_pose(binder, pose, indices)
+    return binder
+
+
+def _metric_surface_hydrophobicity(binder_pose: Any) -> float:
+    unsupported = [str(binder_pose.residue_type(i).name())
+                   for i in range(1, binder_pose.total_residue() + 1)
+                   if not binder_pose.residue_type(i).is_alpha_aa()]
+    if unsupported:
+        raise ValueError("Rosetta LayerSelector requires alpha-amino-acid backbones: "
+                         + ",".join(sorted(set(unsupported))))
+    selector = pr.rosetta.core.select.residue_selector.LayerSelector()
+    selector.set_layers(pick_core=False, pick_boundary=False, pick_surface=True)
+    selected = selector.apply(binder_pose)
+    exposed = apolar = 0
+    for index in range(1, binder_pose.total_residue() + 1):
+        if selected[index]:
+            residue = binder_pose.residue(index)
+            exposed += 1
+            apolar += int(bool(residue.is_apolar()) or residue.name() in {"PHE", "TRP", "TYR"})
+    return apolar / exposed if exposed else 0.0
+
+
+def _required_iam_metrics(pose: Any, partners: str, scorefxn: Any,
+                          wanted: set[str], *, native_no_pack: bool) -> dict:
+    iam = InterfaceAnalyzerMover()
+    _set_interface_analyzer_interface(iam, partners)
+    iam.set_scorefunction(scorefxn)
+    iam.set_compute_packstat("PackStat" in wanted and not native_no_pack)
+    iam.set_compute_interface_energy(bool(wanted & {"dG", "n_InterfaceHbonds", "dG/dSASA"}))
+    iam.set_calc_dSASA(bool(wanted & {"dSASA", "n_InterfaceHbonds", "dG/dSASA"}))
+    iam.set_calc_hbond_sasaE("n_InterfaceHbonds" in wanted)
+    iam.set_compute_interface_sc("ShapeComplementarity" in wanted)
+    iam.set_pack_input(False)
+    iam.set_pack_separated(not native_no_pack)
+    iam.apply(pose.clone())
+    data = iam.get_all_data() if wanted & {"ShapeComplementarity", "n_InterfaceHbonds", "dG/dSASA"} else None
+    actions = {
+        "ShapeComplementarity": lambda: float(data.sc_value),
+        "n_InterfaceHbonds": lambda: float(data.interface_hbonds),
+        "dG": lambda: float(iam.get_interface_dG()),
+        "dSASA": lambda: float(iam.get_interface_delta_sasa()),
+        "PackStat": lambda: None if native_no_pack else float(iam.get_interface_packstat()),
+        "dG/dSASA": lambda: float(data.dG_dSASA_ratio) * 100.0,
+    }
+    result = {}
+    for name in wanted:
+        try:
+            result[name] = actions[name]()
+        except Exception as exc:
+            result[name] = exc
+    return result
+
+
+def _metric_partner_jump(pose: Any, binder_chain: str, target_chains: str) -> int:
+    """Set one assembly separation jump on this private metric clone."""
+    jumps = pr.rosetta.utility.vector1_int()
+    jumps.append(1)
+    pr.rosetta.protocols.docking.setup_foldtree(pose, f"{target_chains}_{binder_chain}", jumps)
+    binder = set(_binder_pose_indices(pose, binder_chain=binder_chain))
+    target = set(range(1, pose.total_residue() + 1)) - binder
+    for jump in range(1, pose.num_jump() + 1):
+        partition = pose.fold_tree().partition_by_jump(jump)
+        selected = {i for i in range(1, pose.total_residue() + 1) if partition[i]}
+        if selected == binder or selected == target:
+            return jump
+    raise ValueError("native metric FoldTree does not separate the declared partner assemblies")
+
+
+def _metric_bun_atom_mask(pose: Any, selected: tuple[int, int] | None = None) -> Any:
+    mask = pr.rosetta.core.id.AtomID_Map_bool_t(pose.total_residue(), False)
+    for index in range(1, pose.total_residue() + 1):
+        mask.resize(index, pose.residue(index).natoms(), selected is None)
+    if selected is not None:
+        atom = pr.rosetta.core.id.AtomID(selected[1], selected[0])
+        mask.set(atom, True)
+    return mask
+
+
+def _metric_multi_chain_buns(pose: Any, jump: int, scorefxn: Any) -> float:
+    """Use native heavy-atom ddG counting for SDKs whose XML filter limits chains."""
+    options = pr.rosetta.basic.options
+    parameters = [1.1, 20.0, float(options.get_real_option("score:hb_max_energy")),
+                  True, False, True, False, False, True, False, True]
+    calculator_type = pr.rosetta.protocols.simple_pose_metric_calculators.BuriedUnsatisfiedPolarsCalculator
+    bound, apo = pose.clone(), pose.clone()
+    scorefxn(bound)
+    move = pr.rosetta.protocols.rigid.RigidBodyTransMover(apo, jump)
+    move.trans_axis(move.trans_axis())
+    move.step_size(1000.0)
+    move.apply(apo)
+    apo.update_residue_neighbors()
+    scorefxn(apo)
+    bound_calculator = calculator_type("dalphaball", "default", _metric_bun_atom_mask(bound),
+        float(options.get_real_option("bunsat_calc2:sasa_burial_cutoff")), *parameters)
+    apo_calculator = calculator_type("dalphaball", "default", _metric_bun_atom_mask(apo), 0.2, *parameters)
+    total = json.loads(bound_calculator.get("all_heavy_unsats", bound))
+    residues = json.loads(bound_calculator.get("residue_bur_unsat_polars", bound))
+    if type(total) is not int or total < 0 or not isinstance(residues, list) or sum(residues) != total:
+        raise ValueError("native BUN residue counts disagree with heavy-atom total")
+    found = included = 0
+    for index, expected in enumerate(residues, 1):
+        if not expected:
+            continue
+        observed = 0
+        residue = bound.residue(index)
+        for atom in range(1, residue.nheavyatoms() + 1):
+            atom_type = residue.atom_type(atom)
+            if not (atom_type.is_donor() or atom_type.is_acceptor()):
+                continue
+            bound_calculator.set_special_region(_metric_bun_atom_mask(bound, (index, atom)))
+            present = json.loads(bound_calculator.get("all_heavy_unsats", bound))
+            if type(present) is not int or present not in {0, 1}:
+                raise ValueError("native BUN single-atom flag is invalid")
+            if present:
+                observed += 1
+                found += 1
+                apo_calculator.set_special_region(_metric_bun_atom_mask(apo, (index, atom)))
+                apo_present = json.loads(apo_calculator.get("all_heavy_unsats", apo))
+                if type(apo_present) is not int or apo_present not in {0, 1}:
+                    raise ValueError("native apo BUN single-atom flag is invalid")
+                included += 1 - apo_present
+        if observed != expected:
+            raise ValueError("native BUN atom flags disagree with residue count")
+    if found != total:
+        raise ValueError("native BUN atom flags disagree with heavy-atom total")
+    return float(included)
+
+
+def _required_buns(pose: Any, binder_chain: str, targets: str, scorefxn: Any,
+                   scorefxn_name: str, *, native_no_pack: bool) -> float:
+    metric_pose = pose.clone()
+    jump = _metric_partner_jump(metric_pose, binder_chain, targets)
+    if metric_pose.num_chains() >= 4:
+        return _metric_multi_chain_buns(metric_pose, jump, scorefxn)
+    reweight = '<Reweight scoretype="fa_dun" weight="0"/>' if native_no_pack else ''
+    xml = (
+        '<ROSETTASCRIPTS><SCOREFXNS><ScoreFunction name="scorefxn" weights="'
+        + scorefxn_name + '">' + reweight + '</ScoreFunction></SCOREFXNS><FILTERS>'
+        '<BuriedUnsatHbonds name="buns" report_all_heavy_atom_unsats="true" '
+        'scorefxn="scorefxn" ignore_surface_res="false" use_ddG_style="true" '
+        f'jump_number="{jump}" dalphaball_sasa="1" probe_radius="1.1" '
+        'burial_cutoff_apo="0.2" confidence="0" /></FILTERS>'
+        '<PROTOCOLS><Add filter="buns"/></PROTOCOLS></ROSETTASCRIPTS>'
+    )
+    return float(XmlObjects.create_from_string(xml).get_filter("buns").report_sm(metric_pose))
+
+
+def score_required_interface(pose: Any, *, binder_chain: str, target_chains: str,
+                             scorefxn: Any, scorefxn_name: str,
+                             required_metrics: Iterable[str], native_no_pack: bool,
+                             compute_buns: bool) -> dict[str, Any]:
+    """Calculate only requested PF metric families and their dependencies."""
+    from .metrics import raw_metric_requirements
+    requested = raw_metric_requirements(required_metrics)
+    wanted = set(requested)
+    dependencies = {
+        "I_sc": {"dG"}, "pep_sc": {"pep_internal_sc", "dG"},
+        "reweighted_sc": {"total_score", "pep_internal_sc", "dG"},
+        "rank_score": {"total_score", "pep_internal_sc", "dG"},
+        "Interface_SASA_%": {"dSASA", "binder_sasa"},
+        "InterfaceHbondsPercentage": {"n_InterfaceHbonds", "n_InterfaceResidues"},
+        "InterfaceUnsatHbondsPercentage": {"n_InterfaceUnsatHbonds", "n_InterfaceResidues"},
+    }
+    for key in list(wanted):
+        wanted.update(dependencies.get(key, ()))
+    raw, errors = {}, {}
+    def capture(name, action, decimals=2):
+        try:
+            value = action()
+            if isinstance(value, Exception):
+                raise value
+            if value is None or not np.isfinite(float(value)):
+                raise ValueError("native metric is unavailable or nonfinite")
+            raw[name] = float(value)
+        except Exception as exc:
+            errors[name] = f"{type(exc).__name__}: {exc}"
+    iam_names = wanted & {"ShapeComplementarity", "n_InterfaceHbonds", "dG", "dSASA", "PackStat", "dG/dSASA"}
+    if iam_names:
+        try:
+            values = _required_iam_metrics(pose, f"{target_chains}_{binder_chain}", scorefxn,
+                                          iam_names, native_no_pack=native_no_pack)
+        except Exception as exc:
+            values = dict.fromkeys(iam_names, exc)
+        for name in sorted(iam_names):
+            capture(name, lambda name=name: values[name], 3 if name in {"ShapeComplementarity", "PackStat"} else 2)
+    if "total_score" in wanted:
+        capture("total_score", lambda: scorefxn(pose.clone()), 3)
+    contact_names = {"n_InterfaceResidues", "Interface_Hydrophobicity"}
+    if wanted & contact_names:
+        try:
+            contacts = interface_residues_by_distance(pose, binder_chain=binder_chain,
+                                                       target_chains=target_chains)
+            raw["n_InterfaceResidues"] = int(contacts.n_residues)
+            if "Interface_Hydrophobicity" in wanted:
+                if native_no_pack:
+                    errors["Interface_Hydrophobicity"] = "canonical interface composition is unavailable for native nonstandard residues"
+                else:
+                    hydrophobic = sum(contacts.aa_counts[aa] for aa in "ACFILMPVWY")
+                    raw["Interface_Hydrophobicity"] = 100*hydrophobic/contacts.n_residues if contacts.n_residues else 0.0
+        except Exception as exc:
+            errors.update({name: str(exc) for name in wanted & contact_names})
+    binder, binder_error = None, None
+    binder_names = {"Surface_Hydrophobicity", "pep_internal_sc", "binder_sasa"}
+    if wanted & binder_names:
+        try:
+            binder = _metric_binder_pose(pose, binder_chain)
+        except Exception as exc:
+            binder_error = exc
+    def prepared_binder():
+        if binder_error is not None:
+            raise binder_error
+        return binder
+    if "Surface_Hydrophobicity" in wanted:
+        capture("Surface_Hydrophobicity", lambda: _metric_surface_hydrophobicity(prepared_binder()), 4)
+    if "Binder_Energy_Score" in wanted:
+        def energy():
+            metric = pr.rosetta.core.simple_metrics.metrics.TotalEnergyMetric()
+            metric.set_scorefunction(scorefxn)
+            metric.set_residue_selector(ChainSelector(binder_chain))
+            return metric.calculate(pose.clone())
+        capture("Binder_Energy_Score", energy)
+    if "pep_internal_sc" in wanted:
+        capture("pep_internal_sc", lambda: scorefxn(prepared_binder()), 3)
+    if "binder_sasa" in wanted:
+        def sasa():
+            metric = pr.rosetta.core.simple_metrics.metrics.SasaMetric()
+            metric.set_residue_selector(ChainSelector(binder_chain))
+            return metric.calculate(pose.clone())
+        capture("binder_sasa", sasa)
+    if "n_InterfaceUnsatHbonds" in wanted:
+        def buns():
+            if not compute_buns:
+                raise ValueError("BUN calculation is disabled")
+            return _required_buns(pose, binder_chain, target_chains, scorefxn,
+                                  scorefxn_name, native_no_pack=native_no_pack)
+        capture("n_InterfaceUnsatHbonds", buns)
+    actions = {
+        "I_sc": lambda: raw["dG"],
+        "pep_sc": lambda: raw["pep_internal_sc"]+raw["dG"],
+        "reweighted_sc": lambda: raw["total_score"]+raw["pep_internal_sc"]+2*raw["dG"],
+        "rank_score": lambda: raw["total_score"]+raw["pep_internal_sc"]+2*raw["dG"],
+        "Interface_SASA_%": lambda: 100*raw["dSASA"]/raw["binder_sasa"] if raw["binder_sasa"] > 0 else 0.,
+        "InterfaceHbondsPercentage": lambda: 100*raw["n_InterfaceHbonds"]/raw["n_InterfaceResidues"] if raw["n_InterfaceResidues"] else None,
+        "InterfaceUnsatHbondsPercentage": lambda: 100*raw["n_InterfaceUnsatHbonds"]/raw["n_InterfaceResidues"] if raw["n_InterfaceResidues"] else None,
+    }
+    for name in wanted & set(actions):
+        capture(name, actions[name], 3 if name in {"pep_sc", "reweighted_sc", "rank_score"} else 2)
+    precision = {"Surface_Hydrophobicity": 4, "ShapeComplementarity": 3, "PackStat": 3,
+                 "total_score": 3, "I_sc": 3, "pep_internal_sc": 3, "pep_sc": 3,
+                 "reweighted_sc": 3, "rank_score": 3}
+    result = {name: (int(raw[name]) if name == "n_InterfaceResidues" else
+                     round(raw[name], precision.get(name, 2)))
+              for name in requested if name in raw}
+    if errors:
+        result["unavailable_metric_errors"] = errors
+    return result
+
+
 def score_interface(
     pdb_path: str,
     *,
@@ -1049,6 +1361,7 @@ def score_interface(
     relaxed_out_path: str | None = None,
     native_pose: Any = None,
     native_no_pack: bool = False,
+    required_metrics: Iterable[str] | None = None,
 ) -> dict[str, Any]:
 
     pose = native_pose if native_pose is not None else pose_from_pdb_no_link(pdb_path)
@@ -1078,7 +1391,7 @@ def score_interface(
         if relax_before_scoring:
             raise ValueError("Native nonstandard poses cannot be relaxed or packed by Rosetta")
     else:
-        scorefxn_obj = pr.create_score_function(effective_scorefxn)
+        scorefxn_obj = get_scorefxn(effective_scorefxn)
 
     if relax_before_scoring:
         subset, max_iter = resolve_relax_settings(
@@ -1130,6 +1443,13 @@ def score_interface(
         target_chain_str = _infer_target_chains_from_pose(pose, binder_chain=binder_chain)
     else:
         target_chain_str = "".join(_parse_chain_ids(target_chains))
+
+    if required_metrics is not None:
+        return score_required_interface(
+            pose, binder_chain=binder_chain, target_chains=target_chain_str,
+            scorefxn=scorefxn_obj, scorefxn_name=effective_scorefxn,
+            required_metrics=required_metrics, native_no_pack=native_no_pack,
+            compute_buns=compute_buns)
 
     total_score = float(scorefxn_obj(pose))
 

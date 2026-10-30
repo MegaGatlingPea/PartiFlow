@@ -239,11 +239,11 @@ def _resolve_auto_postprocess_method(task: Any) -> str:
 
 def _resolve_rosetta_relax_settings(
     *,
-    relax_mode: str = "local",
+    relax_mode: str = "global",
     relax_subset: str | None = None,
     relax_max_iter: int | None = None,
 ) -> tuple[str, str, int]:
-    mode = str(relax_mode or "local").strip().lower()
+    mode = str(relax_mode or "global").strip().lower()
     if mode not in {"local", "global"}:
         raise ValueError(
             f"Unsupported relax_mode {relax_mode!r}; expected local or global."
@@ -275,16 +275,21 @@ def relax_with_topology_openmm(
     topology_entries: Any,
     binder_chain: str = "L",
     platform: str = "CUDA",
+    context=None,
+    threads: int = 1,
 ) -> tuple[str, dict]:
     from partiflow.postprocess.relax.topology import TopologyFixer, parse_topology_entries
     from partiflow.postprocess.relax.openmm_relaxer import run_topology_relax
 
-    with open(pdb_path, "r") as handle:
-        pdb_str = handle.read()
+    if context is not None and context.input_source is not None:
+        pdb_str = context.input_source.text
+    else:
+        with open(pdb_path, "r") as handle:
+            pdb_str = handle.read()
 
     entries = parse_topology_entries(_decode_topology_entries(topology_entries))
     fix_result = TopologyFixer()(pdb_str, binder_chain, entries)
-    pdb_min, energy_info = run_topology_relax(fix_result, platform=platform)
+    pdb_min, energy_info = run_topology_relax(fix_result, platform=platform, threads=threads)
     validation_failures = _validate_topology_bond_distances(
         pdb_min,
         fix_result.applied_entries,
@@ -296,7 +301,7 @@ def relax_with_topology_openmm(
         postprocess_warnings.append(
             f"{platform} topology bond validation failed; retrying on CPU: {validation_failures}"
         )
-        pdb_min, energy_info = run_topology_relax(fix_result, platform="CPU")
+        pdb_min, energy_info = run_topology_relax(fix_result, platform="CPU", threads=threads)
         postprocess_notes.append(f"cpu_retry_after_{platform.lower()}_validation_failure")
         validation_failures = _validate_topology_bond_distances(
             pdb_min,
@@ -308,6 +313,12 @@ def relax_with_topology_openmm(
 
     with open(output_path, "w") as handle:
         handle.write(pdb_min)
+    if context is not None:
+        from partiflow.postprocess.source import PDBSource
+        context.output_source = PDBSource.from_text(pdb_min, path=output_path)
+        context.pose = None
+        context.native_load = {}
+        context.backend = "openmm"
 
     info = {
         "einit": energy_info["einit"],
@@ -323,23 +334,19 @@ def relax_with_topology_openmm(
 
 
 def relax_with_rosetta(*, pdb_path, output_path, topology_entries, binder_chain="L",
-                       relax_mode="local", relax_subset=None, relax_max_iter=None):
-    from partiflow.postprocess.native import initialize_pyrosetta_score_only
+                       relax_mode="global", relax_subset=None, relax_max_iter=None,
+                       relax_repeats=1, seed=2026, threads=1, context=None):
     from partiflow.postprocess import rosetta
-    initialize_pyrosetta_score_only()
-    pose = rosetta.pose_from_pdb_no_link(str(pdb_path))
-    cyclization = None
-    if rosetta.should_cyclize_binder(pose, binder_chain=binder_chain,
-                                     topology_entries=topology_entries):
-        cyclization = rosetta.cyclize_head_tail_binder_pose(pose, binder_chain=binder_chain)
-    disulfides = rosetta.apply_disulfide_topology_to_pose(
-        pose, binder_chain=binder_chain, topology_entries=topology_entries)
+    from partiflow.postprocess.source import PDBSource
+    rosetta.initialize_standard_beta(seed=seed, threads=threads)
+    source = context.input_source if context is not None else PDBSource.read(pdb_path)
+    pose, loaded = rosetta.load_standard_pose(source, binder_chain=binder_chain,
+        topology_entries=topology_entries)
+    cyclization, disulfides = loaded["cyclization"], loaded["disulfides"]
     mode, subset, iterations = _resolve_rosetta_relax_settings(
         relax_mode=relax_mode, relax_subset=relax_subset, relax_max_iter=relax_max_iter)
-    rosetta.fast_relax_pose2(
-        pose, binder_chains=binder_chain,
-        scorefxn="ref2015_cst" if cyclization or disulfides else "ref2015",
-        max_iter=iterations, subset=subset, move_bb=True,
+    rosetta.fast_relax_pose2(pose, binder_chains=binder_chain, scorefxn="beta_nov16",
+        repeats=relax_repeats, max_iter=iterations, subset=subset, move_bb=True,
         cyclic_first_idx=cyclization["first_pose_idx"] if cyclization else None,
         cyclic_last_idx=cyclization["last_pose_idx"] if cyclization else None)
     if cyclization:
@@ -352,13 +359,18 @@ def relax_with_rosetta(*, pdb_path, output_path, topology_entries, binder_chain=
         rosetta.append_disulfide_records(str(output_path), disulfide_info=disulfides)
     if cyclization:
         rosetta.append_head_tail_conect(str(output_path), cyclization_info=cyclization)
+    if context is not None:
+        context.pose = pose
+        context.output_source = PDBSource.read(output_path)
+        context.backend = "rosetta_topology"
     return str(output_path), {"applied_topology_entries": topology_entries,
-                              "relax_mode": mode, "relax_subset": subset,
-                              "relax_max_iter": iterations}
+        "relax_mode": mode, "relax_subset": subset, "relax_max_iter": iterations,
+        "relax_repeats": relax_repeats, "scorefunction": "beta_nov16"}
 
 
 def relax_candidate(candidate, output_path, *, platform="CPU", method="auto",
-                    relax_mode="local", relax_subset=None, relax_max_iter=None):
+                    relax_mode="global", relax_subset=None, relax_max_iter=None,
+                    relax_repeats=1, seed=2026, threads=1, context=None):
     from partiflow.postprocess.records import nonstandard_codes, SUPPORTED_TOPOLOGIES
     entries = _decode_topology_entries(candidate.topology_entries)
     unknown = sorted({_normalize_topology_type(e.get("type")) for e in entries} - SUPPORTED_TOPOLOGIES)
@@ -367,21 +379,23 @@ def relax_candidate(candidate, output_path, *, platform="CPU", method="auto",
     requested = _normalize_postprocess_method(candidate.method or method)
     if requested not in {"auto", "openmm", "rosetta_topology"}:
         raise ValueError(f"Unsupported postprocess method: {requested}")
-    ncaa = nonstandard_codes(Path(candidate.path))
+    ncaa = nonstandard_codes(Path(candidate.path), source=context.input_source if context is not None else None)
     needs_openmm = bool(ncaa) or any(_normalize_topology_type(e.get("type")) not in
         {"none", "head_to_tail", "disulfide"} for e in entries)
     if requested == "rosetta_topology" and needs_openmm:
         raise ValueError("Explicit Rosetta relaxation does not support these nonstandard residues/topologies")
-    if requested != "auto":
+    if requested != "auto" and not needs_openmm:
         _validate_explicit_postprocess_method(method=requested, topology_entries=entries)
     resolved = ("openmm" if needs_openmm else _resolve_auto_postprocess_method(candidate)) if requested == "auto" else requested
     def execute(backend):
         if backend == "openmm":
             return relax_with_topology_openmm(pdb_path=str(candidate.path), output_path=str(output_path),
-                topology_entries=entries, binder_chain=candidate.binder_chain, platform=platform)
+                topology_entries=entries, binder_chain=candidate.binder_chain, platform=platform,
+                context=context, threads=threads)
         return relax_with_rosetta(pdb_path=str(candidate.path), output_path=str(output_path),
             topology_entries=entries, binder_chain=candidate.binder_chain, relax_mode=relax_mode,
-            relax_subset=relax_subset, relax_max_iter=relax_max_iter)
+            relax_subset=relax_subset, relax_max_iter=relax_max_iter,
+            relax_repeats=relax_repeats, seed=seed, threads=threads, context=context)
     try:
         result, info = execute(resolved)
     except Exception as exc:

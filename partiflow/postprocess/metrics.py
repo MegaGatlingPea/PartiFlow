@@ -13,6 +13,25 @@ CANONICAL_METRICS = {
 }
 
 
+def raw_metric_requirements(names):
+    """Resolve canonical and legacy names in one place without dropping requests."""
+    raw_names = {target: source for source, target in CANONICAL_METRICS.items()}
+    return {raw_names.get(name, name) for name in names}
+
+
+def _compact_native_load(info, pose, binder_chain, codes):
+    compact = {key: value for key, value in info.items()
+               if value is None or type(value) in (str, bool, int)
+               or (type(value) is float and math.isfinite(value))}
+    compact["source_nonstandard_codes"] = list(codes)
+    if codes:
+        pdb_info = pose.pdb_info()
+        compact["binder_residue_types"] = sorted({
+            str(pose.residue(i).name()) for i in range(1, pose.total_residue()+1)
+            if str(pdb_info.chain(i)) == binder_chain})
+    return compact
+
+
 def finite_metrics(raw):
     return {
         key: value
@@ -36,7 +55,7 @@ def canonical_metrics(raw):
     return metrics
 
 
-def _compute_metrics(
+def _legacy_metrics(
     path, *, binder_chain="L", topology_entries=None, compute_buns=True
 ):
     from partiflow.postprocess import native, rosetta
@@ -148,63 +167,125 @@ def preset_record(report):
     }
 
 
-def compute_metrics(
-    path, *, binder_chain="L", topology_entries=None, compute_buns=True
-):
-    """Keep native-library failures local while preserving completed geometry."""
-    if not nonstandard_codes(Path(path)):
-        return _compute_metrics(
-            path,
-            binder_chain=binder_chain,
-            topology_entries=topology_entries,
-            compute_buns=compute_buns,
-        )
-    import json
-    import os
-    import subprocess
-    import sys
-    import tempfile
-    from partiflow.postprocess.records import pdb_atoms
-    from partiflow.postprocess.runner import _json_value
+def _head_tail_distance(source, binder_chain):
+    atoms = [atom for atom in source.atoms if atom["chain"] == binder_chain]
+    residues = list(dict.fromkeys((atom["res_id"], atom["ins_code"]) for atom in atoms))
+    first, last = residues[0], residues[-1]
+    nitrogen = next(atom["xyz"] for atom in atoms if (atom["res_id"],atom["ins_code"]) == first and atom["atom"] == "N")
+    carbon = next(atom["xyz"] for atom in atoms if (atom["res_id"],atom["ins_code"]) == last and atom["atom"] == "C")
+    return round(math.sqrt(sum((a-b)**2 for a,b in zip(nitrogen,carbon))), 3)
 
-    targets = {atom["chain"] for atom in pdb_atoms(path)} - {binder_chain}
-    protocol = "complex" if targets else "monomer"
-    with tempfile.TemporaryDirectory(prefix="partiflow-metrics-") as temporary:
-        request = Path(temporary) / "input.json"
-        output = Path(temporary) / "output.json"
-        value = dict(
-            path=str(Path(path).resolve()),
-            binder_chain=binder_chain,
-            topology_entries=topology_entries,
-            compute_buns=compute_buns,
-        )
-        request.write_text(json.dumps(_json_value(value), allow_nan=False))
+
+def _compute_metrics(path, *, binder_chain="L", topology_entries=None, compute_buns=True,
+                     context=None, required_metrics=None):
+    """Score one prepared pose; source and native objects stay within its worker."""
+    if context is None and required_metrics is None:
+        return _legacy_metrics(path, binder_chain=binder_chain,
+                               topology_entries=topology_entries, compute_buns=compute_buns)
+    from partiflow.postprocess import native, rosetta
+    from partiflow.postprocess.source import PDBSource
+    source = getattr(context, "output_source", None)
+    if source is None:
+        source = PDBSource.read(path)
+        if context is not None:
+            context.output_source = source
+    profile = getattr(context, "sdk_profile", "native_ref2015")
+    codes = list(source.nonstandard_codes)
+    fixed_native = bool(codes) or (context is not None and profile == "native_ref2015")
+    pose = getattr(context, "pose", None)
+    load_info = dict(getattr(context, "native_load", {}) or {})
+    if pose is None:
+        if profile == "standard_beta":
+            pose, load_info = rosetta.load_standard_pose(
+                source, binder_chain=binder_chain, topology_entries=topology_entries)
+        else:
+            pose, load_info = native.load_score_only_pose(
+                path, binder_chain=binder_chain, topology_entries=topology_entries, source=source)
+        if context is not None:
+            context.pose, context.native_load = pose, load_info
+    if context is not None:
+        rosetta.seed_metrics(context.seed)
+    before = native.snapshot_coordinates(pose) if fixed_native else None
+    chains = rosetta._chain_ids_in_pose(pose)
+    targets = "".join(chain for chain in chains if chain != binder_chain)
+    score_name = "beta_nov16" if profile == "standard_beta" else "ref2015"
+    if profile == "standard_beta":
+        scorefxn, adjustments = rosetta.get_scorefxn(score_name), []
+    else:
+        scorefxn, adjustments = native._score_function_for_pose(pose)
+    requested = None if required_metrics is None else set(required_metrics)
+    raw_requested = None if requested is None else raw_metric_requirements(requested)
+    raw, failures = {}, {}
+    component_names = {"fa_atr", "fa_rep", "fa_sol", "fa_elec", "hbond_sr_bb", "hbond_lr_bb",
+                       "hbond_bb_sc", "hbond_sc", "rama", "omega", "pro_close", "total"}
+    if raw_requested is None or raw_requested & (component_names | {"total_score"}):
         try:
-            process = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "partiflow.postprocess.metric_worker",
-                    str(request),
-                    str(output),
-                ],
-                env={**os.environ, "CUDA_VISIBLE_DEVICES": ""},
-                capture_output=True,
-                text=True,
-                timeout=3600,
-            )
-            if process.returncode == 0 and output.is_file():
-                return json.loads(output.read_text())
-            reason = (
-                f"Native metric worker exited {process.returncode}: "
-                + process.stderr[-2000:]
-            )
-        except subprocess.TimeoutExpired:
-            reason = "Native metric calculation exceeded 3600 seconds"
-        return {
-            "status": "unavailable",
-            "protocol": protocol,
-            "metrics": {},
-            "raw_metrics": {},
-            "metric_errors": {"native_worker": reason},
-        }
+            value = float(scorefxn(pose))
+            if not math.isfinite(value):
+                raise ValueError("nonfinite native energy")
+            if raw_requested is None or "total_score" in raw_requested:
+                raw["total_score"] = value
+            if raw_requested is None or raw_requested & component_names:
+                components, weights, pathology, warnings = native._score_components(scorefxn, pose)
+                if pathology:
+                    raise ValueError(f"Non-finite Rosetta components: {pathology}")
+                raw.update({name: value for name,value in components.items()
+                            if raw_requested is None or name in raw_requested})
+                if raw_requested is None:
+                    load_info.update(score_component_weights=weights,
+                                     score_component_warnings=warnings,
+                                     scorefxn_adjustments=adjustments)
+        except Exception as exc:
+            failures["energy"] = f"{type(exc).__name__}: {exc}"
+    if targets:
+        try:
+            interface_requested = None if raw_requested is None else raw_requested-component_names-{"total_score", "binder_head_tail_distance_before", "binder_head_tail_distance_after"}
+            if interface_requested is None or interface_requested:
+                raw.update(rosetta.score_interface(
+                    str(path), binder_chain=binder_chain, target_chains=targets,
+                    topology_entries=topology_entries, scorefxn=score_name,
+                    compute_buns=compute_buns, relax_before_scoring=False,
+                    native_pose=pose, native_no_pack=fixed_native,
+                    required_metrics=interface_requested))
+        except Exception as exc:
+            failures["interface"] = f"{type(exc).__name__}: {exc}"
+    if raw_requested is not None:
+        for metric, view in (("binder_head_tail_distance_before", getattr(context,"input_source",None)),
+                             ("binder_head_tail_distance_after", source)):
+            if metric in raw_requested:
+                try:
+                    if not any(rosetta._normalize_topology_type(e.get("type")) == "head_to_tail"
+                               for e in rosetta._decode_topology_entries(topology_entries)):
+                        raise ValueError("head-to-tail topology is not requested")
+                    if view is None:
+                        raise ValueError("original input view is unavailable")
+                    raw[metric] = _head_tail_distance(view,binder_chain)
+                except Exception as exc:
+                    failures[metric] = f"{type(exc).__name__}: {exc}"
+    if before is not None and before != native.snapshot_coordinates(pose):
+        raise ValueError("Metric computation changed input atom identity or coordinates")
+    failures.update(raw.pop("unavailable_metric_errors", {}))
+    measured = canonical_metrics(raw)
+    required = set(CANONICAL_METRICS.values()) if requested is None else requested
+    missing = sorted(required-set(measured)) if targets else []
+    for name in missing:
+        original = next(iter(raw_metric_requirements([name])))
+        failures.setdefault(name, failures.get(original, "required metric unavailable"))
+    iam_keys = {"ShapeComplementarity", "n_InterfaceHbonds", "dG", "dSASA", "PackStat", "dG/dSASA",
+                "I_sc", "pep_sc", "reweighted_sc", "rank_score", "Interface_SASA_%", "InterfaceHbondsPercentage"}
+    packing = bool(targets) and not fixed_native and (raw_requested is None or bool(raw_requested & iam_keys))
+    return {"status": "complete" if measured or not required else "unavailable",
+            "protocol": "complex" if targets else "monomer", "metrics": measured,
+            "raw_metrics": raw, "unavailable_metrics": missing, "metric_errors": failures,
+            "native_load": _compact_native_load(load_info,pose,binder_chain,codes)
+                           if context is not None and requested is not None else load_info,
+            "packing_enabled": packing, "nonstandard_residues": codes,
+            "target_chains": targets, "sdk_profile": profile}
+
+
+def compute_metrics(path, *, binder_chain="L", topology_entries=None, compute_buns=True,
+                    context=None, required_metrics=None):
+    """Execute within the owning actor; native process failures belong to Ray."""
+    return _compute_metrics(path,binder_chain=binder_chain,topology_entries=topology_entries,
+                            compute_buns=compute_buns,context=context,
+                            required_metrics=required_metrics)

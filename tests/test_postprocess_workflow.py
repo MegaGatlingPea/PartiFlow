@@ -42,6 +42,10 @@ def relaxed(item, output, **options):
 
 class PostprocessWorkflowTests(unittest.TestCase):
     def setUp(self):
+        from postprocess_test_utils import inline_dispatch
+        self.dispatch_patch = patch("partiflow.postprocess.dispatch.dispatch_items", side_effect=inline_dispatch)
+        self.dispatch_patch.start()
+        self.addCleanup(self.dispatch_patch.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.task = self.root / "task"

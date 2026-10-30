@@ -74,40 +74,21 @@ def strict_bool(value, *, field_name="boolean"):
     raise ValueError(f"{field_name} must be true or false")
 
 
-def pdb_atoms(path):
-    atoms = []
-    for line in Path(path).read_text().splitlines():
-        if line.startswith(("ATOM  ", "HETATM")):
-            if len(line) < 54:
-                raise ValueError(f"Truncated coordinate record in {path}")
-            xyz = tuple(float(line[start : start + 8]) for start in (30, 38, 46))
-            if not all(math.isfinite(value) for value in xyz):
-                raise ValueError(f"Non-finite coordinates in {path}")
-            atoms.append(
-                {
-                    "chain": line[21:22].strip() or " ",
-                    "res_id": line[22:26].strip(),
-                    "ins_code": line[26:27].strip(),
-                    "resname": line[17:20].strip(),
-                    "atom": line[12:16].strip(),
-                    "atom_id": int(line[6:11]),
-                    "xyz": xyz,
-                    "element": line[76:78].strip().upper() if len(line) > 77 else "",
-                }
-            )
-    if not atoms:
-        raise ValueError(f"No coordinate atoms in {path}")
-    return atoms
+def pdb_atoms(path, *, source=None):
+    from partiflow.postprocess.source import PDBSource
+
+    return (source if source is not None else PDBSource.read(path)).atoms
 
 
-def nonstandard_codes(path):
+def nonstandard_codes(path, *, source=None):
     return sorted(
-        {a["resname"] for a in pdb_atoms(path)} - set(STANDARD) - set(STANDARD_ALIASES)
+        {a["resname"] for a in pdb_atoms(path, source=source)}
+        - set(STANDARD) - set(STANDARD_ALIASES)
     )
 
 
-def final_identity(path, binder_chain, original=None):
-    atoms = pdb_atoms(path)
+def final_identity(path, binder_chain, original=None, *, source=None):
+    atoms = pdb_atoms(path, source=source)
     by_chain = {}
     for atom in atoms:
         if atom["atom"] != "CA":
@@ -173,14 +154,29 @@ class WorkItem:
     report_dir: Path | None = None
     replace: bool = True
     candidate_id: str = ""
+    sdk_profile: str = "standard_beta"
+    needs_gpu: bool = False
 
 
-def refresh_locators(original_path, output_path, row):
+@dataclass
+class SampleContext:
+    """Worker-local parsed structures and native objects; never a report payload."""
+
+    input_source: Any = None
+    output_source: Any = None
+    pose: Any = None
+    native_load: dict = field(default_factory=dict)
+    sdk_profile: str = "standard_beta"
+    backend: str | None = None
+    seed: int = 2026
+
+
+def refresh_locators(original_path, output_path, row, *, source=None, output_source=None):
     """Refresh declared atom locators after the backend writes its final atom order."""
     if not row:
         return {}
-    source_atoms = pdb_atoms(original_path)
-    final_atoms = pdb_atoms(output_path)
+    source_atoms = pdb_atoms(original_path, source=source)
+    final_atoms = pdb_atoms(output_path, source=output_source)
     source_by_serial = {atom["atom_id"]: atom for atom in source_atoms}
     final_by_key = {
         (atom["chain"], str(atom["res_id"]), atom["ins_code"], atom["atom"]): atom

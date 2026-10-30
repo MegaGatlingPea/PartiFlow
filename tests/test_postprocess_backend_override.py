@@ -50,6 +50,10 @@ def backends(*, openmm_error=None, rosetta_error=None):
 
 class PostprocessBackendOverrideTests(unittest.TestCase):
     def setUp(self):
+        from postprocess_test_utils import inline_dispatch
+        self.dispatch_patch = patch("partiflow.postprocess.dispatch.dispatch_items", side_effect=inline_dispatch)
+        self.dispatch_patch.start()
+        self.addCleanup(self.dispatch_patch.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.counter = 0
@@ -176,6 +180,18 @@ class PostprocessBackendOverrideTests(unittest.TestCase):
                     config={"method": "rosetta_topology"},
                     method="openmm",
                 )
+
+    def test_explicit_openmm_accepts_native_headtail_chemistry(self):
+        source = self.root / "native.pdb"
+        source.write_text(pdb().replace("ALA", "BAL"))
+        item = WorkItem(source, "task", "native", method="openmm",
+            topology_entries=[{"type": "head_to_tail", "anchors": [1, 2]}])
+        with backends() as backend:
+            output, info = relax_candidate(item, self.root / "output.pdb")
+        backend.openmm.assert_called_once()
+        backend.rosetta.assert_not_called()
+        self.assertEqual(info["method"], "openmm")
+        self.assertEqual(output.read_bytes(), source.read_bytes())
 
     def test_auto_preserves_each_saved_request_for_all_inputs(self):
         for kind in ("candidate", "work_item", "standalone"):
