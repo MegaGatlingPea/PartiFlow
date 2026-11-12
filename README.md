@@ -75,6 +75,6 @@ partiflow design configs/tasks/scaffold.yaml --task klk2_scaffold_linear \
   --ckpt ./ckpts/partiflow-ss.ckpt --out inference/scaffold_linear
 ```
 
-The seven commands are `train`, `design`, `validate`, `postprocess`, `cluster`, `check`, and `download`. `python -m partiflow` accepts the same arguments. See the [guide index](docs/README.md), [task fields](docs/task_schema.md), [Best-of-N search](docs/reward.md), and [topology guide](docs/topology.md) for the next steps.
+The seven commands are `train`, `design`, `validate`, `postprocess`, `cluster`, `check`, and `download`. Terminals use cyan framed help, grouped resource reports, and execution context and results. `partiflow download` opens a keyboard resource selector; use Up/Down, Space, Enter, and Esc. Explicit command arguments remain available for scripts. Redirected JSON/text and `--show-config` output stay plain; `NO_COLOR` disables colored reports. `python -m partiflow` accepts the same arguments. See the [guide index](docs/README.md), [task fields](docs/task_schema.md), [Best-of-N search](docs/reward.md), and [topology guide](docs/topology.md) for the next steps.
 
 The [performance figures](docs/performance.md) describe the original study and its benchmark settings.

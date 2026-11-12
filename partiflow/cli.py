@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib
 from pathlib import Path
+import sys
 
 
 class CLIParser(argparse.ArgumentParser):
@@ -174,7 +175,7 @@ def parser():
         description="List resource status, download configured assets, or import local files.",
         epilog="Example: partiflow download --list",
     )
-    download.add_argument("targets", nargs="*", help="Resource target names; use --list to inspect available targets")
+    download.add_argument("targets", nargs="*", help="Resource target names; omit for the terminal selector, or use --list")
     selection = download.add_argument_group("selection")
     selection.add_argument("--list", action="store_true", help="List resource paths and configured download availability")
     selection.add_argument("--all", action="store_true", help="Select all configured model and data targets")
@@ -203,13 +204,25 @@ DISPATCH = {
 def main(argv=None):
     args = parser().parse_args(argv)
     try:
+        from .ui import show_completion, show_context
+
+        framed = (args.command not in {"check", "download"}
+                  and not getattr(args, "print_config", False))
+        if framed:
+            show_context(args)
         result = importlib.import_module(DISPATCH[args.command]).run(args)
-        return int(result or 0)
+        status = int(result or 0)
+        if framed:
+            show_completion(args, status)
+        return status
     except (OSError, ValueError, RuntimeError, ImportError) as exc:
         from .ui import show_error
 
         show_error(f"{args.command} failed: {exc}")
         return 1
+    except KeyboardInterrupt:
+        print("Interrupted", file=sys.stderr)
+        return 130
 
 
 if __name__ == "__main__":

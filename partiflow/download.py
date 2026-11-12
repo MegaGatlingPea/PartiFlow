@@ -13,7 +13,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from partiflow.paths import model_root
-from partiflow.ui import DownloadDisplay, show_inventory, terminal_output
+from partiflow.ui import DownloadDisplay, RESOURCE_USAGE, message, show_inventory, terminal_output
 
 MPNN_URL = "https://raw.githubusercontent.com/dauparas/ProteinMPNN/8907e6671bfbfc92303b5f79c4b5e6ce47cdef57"
 AF2_URL = "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar"
@@ -380,6 +380,26 @@ def acquire(
     }
 
 
+def _selection_options(args, root):
+    """Read local paths and source availability without opening model files."""
+    options = []
+    supplied = bool(getattr(args, "from_local", None) or getattr(args, "url", None))
+    for name in TARGETS:
+        record = resource_status(name, root, data_dir=getattr(args, "data_dir", None),
+                                 config=getattr(args, "config", None))
+        configured = name in {"af2", "proteinmpnn", "solublempnn"}
+        skipped = record["status"] == "present" and not getattr(args, "force", False)
+        source = ("Import source: " + Path(args.from_local).name if getattr(args, "from_local", None) else
+                  "Use explicit URL" if getattr(args, "url", None) else
+                  "Configured download URL" if configured else
+                  "Supply --from-local or --url to acquire this target")
+        detail = RESOURCE_USAGE[name] + "\nStatus: " + record["status"] + "\n" + source
+        if skipped:
+            detail += "\nAlready present; existing files will be skipped"
+        options.append({**record, "selectable": skipped or configured or supplied, "detail": detail})
+    return options
+
+
 def run(args):
     targets = list(getattr(args, "targets", None) or [])
     if getattr(args, "all", False):
@@ -409,12 +429,21 @@ def run(args):
             show_inventory(records, root)
         return 0
     if not targets:
-        raise ValueError("Provide download targets, --all, or --list")
+        from partiflow.interactive import can_prompt, select_downloads
+
+        if not can_prompt():
+            raise ValueError("Provide download targets, --all, or --list")
+        targets = select_downloads(_selection_options(args, root), root,
+                                   importing=bool(getattr(args, "from_local", None)))
+        if not targets:
+            message("Cancelled")
+            return 0
     if getattr(args, "url", None) and len(targets) != 1:
         raise ValueError("--url requires exactly one target")
     failed = False
     targets = list(dict.fromkeys(targets))
-    with DownloadDisplay(root, targets) as display:
+    with DownloadDisplay(root, targets, source=getattr(args, "from_local", None),
+                         url=getattr(args, "url", None), force=getattr(args, "force", False)) as display:
         for target in targets:
             display.begin(target)
             try:

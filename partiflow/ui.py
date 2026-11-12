@@ -11,6 +11,17 @@ import sys
 
 
 ACCENT = "cyan"
+RESOURCE_USAGE = {
+    "partiflow": "Peptide generation with the base flow-matching model",
+    "partiflow-aux": "Auxiliary model for configured autoguidance",
+    "partiflow-dock": "Docking-conditioned peptide generation",
+    "partiflow-ss": "Secondary-structure-conditioned peptide generation",
+    "autoencoder": "Structure encoding and decoding for flow matching",
+    "af2": "AF2 structure prediction, validation and reward",
+    "proteinmpnn": "ProteinMPNN sequence design",
+    "solublempnn": "SolubleMPNN sequence design",
+    "pepinter": "PepInter training data with split and processed files",
+}
 _STATUS_STYLES = {
     "present": "green", "complete": "green", "loaded": "green",
     "downloaded": "green", "imported": "green", "skipped": "dim",
@@ -44,12 +55,15 @@ def terminal_output():
     return _console() is not None
 
 
-def _banner(console, title, root=None):
+def _banner(console, title, root=None, description=None):
     from rich.box import ROUNDED
     from rich.panel import Panel
 
-    label = _text("PartiFlow", "bold cyan")
+    label = _text("")
+    label.append("PartiFlow", style="bold cyan")
     label.append("  /  " + title, style=ACCENT)
+    if description:
+        label.append("\n\n" + description, style="default")
     if root is not None:
         label.append("\nModel root: " + str(root), style="dim")
     console.print(Panel(label, box=ROUNDED, border_style=ACCENT, padding=(0, 1)))
@@ -89,12 +103,12 @@ def print_help(parser, file=None):
     if console is None:
         print(parser.format_help(), file=stream, end="")
         return
+    from rich.box import ROUNDED
     from rich.table import Table
 
     command = parser.prog.rsplit(" ", 1)[-1]
-    _banner(console, "CLI" if command == "partiflow" else command + " help")
-    if parser.description:
-        console.print(_text(parser.description))
+    _banner(console, "CLI" if command == "partiflow" else command + " help",
+            description=parser.description)
     console.print(_text(parser.format_usage().strip(), "dim"))
     formatter = argparse.HelpFormatter(parser.prog, width=console.width)
     groups = sorted(
@@ -115,10 +129,10 @@ def print_help(parser, file=None):
                 rows.append((_help_invocation(action), formatter._expand_help(action) if action.help else ""))
         _section(console, "Commands" if subcommands else group.title.capitalize())
         compact = console.width < 60
-        table = Table(box=None, show_edge=False, pad_edge=False, expand=True,
-                      padding=(0, 1), collapse_padding=True,
+        table = Table(box=ROUNDED, show_edge=True, show_lines=True, expand=True,
+                      border_style=ACCENT, padding=(0, 1),
                       show_header=not compact, header_style="bold cyan",
-                      leading=1 if compact else 0)
+                      )
         if compact:
             table.add_column(overflow="fold")
             for label, description in rows:
@@ -126,15 +140,18 @@ def print_help(parser, file=None):
                 value.append("\n" + description, style="default")
                 table.add_row(value)
         else:
-            width = min(max(len(label) for label, _ in rows), console.width // 2)
+            width = min(max(18, max(len(label) for label, _ in rows)), console.width // 2)
             table.add_column("Command" if subcommands else "Argument",
-                             style=ACCENT, width=width, overflow="fold")
-            table.add_column("Description", ratio=1, overflow="fold")
+                             style=ACCENT, width=width, overflow="fold", justify="center")
+            table.add_column("Description", ratio=1, overflow="fold", justify="center")
             for label, description in rows:
                 table.add_row(_text(label, ACCENT), _text(description))
         console.print(table)
+    if command in {"download", "check"}:
+        _section(console, "Resource targets")
+        _fields(console, RESOURCE_USAGE.items(), first_heading="Target", second_heading="Usage")
     if parser.epilog:
-        console.print()
+        _section(console, "Try next")
         console.print(_text(parser.epilog, "dim"))
 
 
@@ -179,13 +196,14 @@ def _resource_detail(record, root):
 
 
 def _status_table(console, rows):
+    from rich.box import ROUNDED
     from rich.table import Table
 
     compact = console.width < 60
-    table = Table(box=None, show_edge=False, pad_edge=False, expand=True,
-                  padding=(0, 1), collapse_padding=True,
+    table = Table(box=ROUNDED, show_edge=True, show_lines=True, expand=True,
+                  border_style=ACCENT, padding=(0, 1),
                   show_header=not compact, header_style="bold cyan",
-                  leading=1 if compact else 0)
+                  )
     if compact:
         table.add_column(overflow="fold")
     else:
@@ -203,6 +221,117 @@ def _status_table(console, rows):
         else:
             table.add_row(_text(label, ACCENT), state, _text(detail))
     console.print(table)
+
+
+def _fields(console, rows, *, first_heading="Setting", second_heading="Value"):
+    from rich.box import ROUNDED
+    from rich.table import Table
+
+    compact = console.width < 60
+    table = Table(box=ROUNDED, border_style=ACCENT, show_lines=True,
+                  expand=True, show_header=not compact, header_style="bold cyan")
+    table.add_column(first_heading, style=ACCENT, overflow="fold",
+                     ratio=2 if not compact else 1)
+    if not compact:
+        table.add_column(second_heading, overflow="fold", ratio=5)
+    for key, value in rows:
+        if compact:
+            text = _text(key, ACCENT)
+            text.append("\n" + str(value), style="default")
+            table.add_row(text)
+        else:
+            table.add_row(_text(key, ACCENT), _text(value))
+    console.print(table)
+
+
+def show_context(args):
+    """Describe an explicit command request without resolving its configuration."""
+    console = _console()
+    if console is None:
+        return False
+    mode = ("Plan" if getattr(args, "plan", False) else
+            "Refilter saved results" if getattr(args, "refilter", False) else
+            "Recompute saved metrics" if getattr(args, "recompute_metrics", False) else
+            "Execute")
+    _banner(console, args.command)
+    rows = [("Operation", mode)]
+    for field, label in (("stage", "Stage"), ("task_file", "Task YAML"),
+                         ("paths", "Inputs"), ("config", "Configuration file"),
+                         ("task", "Selected tasks"), ("out", "Output"),
+                         ("run_name", "Run name"), ("model_dir", "Model root override"),
+                         ("criteria", "Criteria"), ("source", "Sequence sources"),
+                         ("override", "Overrides")):
+        value = getattr(args, field, None)
+        if value is not None and value != []:
+            rows.append((label, "\n".join(map(str, value)) if isinstance(value, list) else str(value)))
+    _fields(console, rows)
+    return True
+
+
+def show_completion(args, status):
+    console = _console()
+    if console is None:
+        return
+    from rich.box import ROUNDED
+    from rich.panel import Panel
+
+    title = "Plan complete" if getattr(args, "plan", False) else "Command complete"
+    if status:
+        title = "Command failed"
+    console.print(Panel(_text(f"{args.command}: exit {status}"), title=title,
+                        title_align="left", box=ROUNDED,
+                        border_style="red" if status else ACCENT))
+
+
+def show_report(title, report):
+    """Render the same report fields as the redirected JSON, without elision."""
+    console = _console()
+    if console is None:
+        return False
+
+    def label(key):
+        return str(key).replace("_", " ").capitalize()
+
+    def display(value):
+        if isinstance(value, str):
+            return value
+        return json.dumps(value, default=str)
+
+    def render(value):
+        if not isinstance(value, dict):
+            _fields(console, [("Value", display(value))])
+            return
+        rows, sections = [], []
+        for key, child in value.items():
+            if isinstance(child, dict) and child:
+                sections.append((label(key), child))
+            elif isinstance(child, (list, tuple)) and child and all(isinstance(item, dict) for item in child):
+                sections.extend((f"{label(key)} {index}", item) for index, item in enumerate(child, 1))
+            else:
+                rows.append((label(key), display(child)))
+        if rows:
+            _fields(console, rows, first_heading="Field")
+        for heading, child in sections:
+            _section(console, heading)
+            render(child)
+
+    _section(console, title)
+    render(report)
+    return True
+
+
+def message(value, *, file=None, flush=True, title=None, failed=False):
+    """Display a CLI event while preserving its existing plain-text fallback."""
+    stream = sys.stdout if file is None else file
+    console = _console(stream)
+    if console is None:
+        print(value, file=stream, flush=flush)
+    else:
+        from rich.box import ROUNDED
+        from rich.panel import Panel
+
+        console.print(Panel(_text(value), title=title, title_align="left",
+                            border_style="red" if failed else ACCENT, box=ROUNDED))
 
 
 def _asset_groups(console, records, root, *, listing=False):
@@ -250,7 +379,7 @@ def show_check(report):
     if console is None:
         return False
     root = Path(report["model_root"])
-    _banner(console, "Check", root)
+    _section(console, "Check results")
     console.print(_text("Mode: " + report["mode"], "dim"))
     _section(console, "Bundled resources")
     _status_table(console, [(Path(item["path"]).name,
@@ -275,10 +404,18 @@ def show_check(report):
         _status_table(console, [("Smoke test", item["status"], _execution_detail(item))])
     console.print()
     status = report["status"]
-    console.print(_text("Check " + status, _STATUS_STYLES.get(status, ACCENT)))
+    message("Check " + status, title="Result", failed=status == "failed")
     if report["mode"] == "paths":
         console.print(_text("Path checks do not load or execute models.", "dim"))
     return True
+
+
+def show_check_start(root, selected, mode):
+    console = _console()
+    if console is None:
+        return
+    _banner(console, "Check", root)
+    _fields(console, [("Operation", mode), ("Selected models", ", ".join(selected))])
 
 
 @contextmanager
@@ -294,13 +431,16 @@ def activity(label):
 class DownloadDisplay:
     """Show completed target counts without guessing transfer byte counts."""
 
-    def __init__(self, root, targets):
+    def __init__(self, root, targets, *, source=None, url=None, force=False):
         self.root = root
         self.targets = list(targets)
         self.console = _console()
         self.progress = None
         self.task = None
         self.records = []
+        self.source = source
+        self.url = url
+        self.force = force
 
     @property
     def active(self):
@@ -312,6 +452,10 @@ class DownloadDisplay:
             from rich.table import Column
 
             _banner(self.console, "Download / import", self.root)
+            _fields(self.console, [("Selected targets", ", ".join(self.targets)),
+                                   ("Source", str(self.source) if self.source else
+                                    "Explicit URL" if self.url else "Configured download URLs"),
+                                   ("Existing files", "Replace" if self.force else "Skip complete targets")])
             columns = [SpinnerColumn(spinner_name="line", style=ACCENT),
                        TextColumn("{task.description}", markup=False,
                                   table_column=Column(ratio=3, min_width=18, overflow="fold"))]

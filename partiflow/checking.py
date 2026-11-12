@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from partiflow.download import MODEL_TARGETS, resource_status
 from partiflow.paths import config_dir, model_root, resource_root
-from partiflow.ui import activity, show_check
+from partiflow.ui import activity, show_check, show_check_start
 
 
 def check_task(path):
@@ -124,6 +124,9 @@ def run(args):
     if unknown:
         raise ValueError(f"Unknown models: {sorted(unknown)}")
     root = model_root(getattr(args, "model_dir", None))
+    mode = ("smoke" if getattr(args, "smoke", False) else
+            "load" if getattr(args, "load", False) else "paths")
+    show_check_start(root, selected, mode)
     package = Path(__file__).parent
     required = [
         config_dir() / "design.yaml",

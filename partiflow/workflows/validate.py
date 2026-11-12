@@ -822,7 +822,11 @@ def run(args):
         for task, rows, candidates, root, state_path, state in plans
     ]
     if getattr(args, "plan", False):
-        print(json.dumps({"tasks": plan_summary, "criteria": criteria}, indent=2))
+        from partiflow.ui import show_report
+
+        report = {"tasks": plan_summary, "criteria": criteria}
+        if not show_report("Validation plan", report):
+            print(json.dumps(report, indent=2))
         return 0
     from .structure import candidate_input, polymer_residue_groups, AA3_TO_1
     from .sequence import MPNNBackend, backend_settings, fixed_positions
@@ -1028,7 +1032,11 @@ def run(args):
                 mpnn.load_count if mpnn is not None else 0
             )
             _atomic_json(root / "summary.json", summary)
-            print(json.dumps({"task": task.name, **summary}, sort_keys=True))
+            from partiflow.ui import show_report
+
+            report = {"task": task.name, **summary}
+            if not show_report("Validation result", report):
+                print(json.dumps(report, sort_keys=True))
     finally:
         if backend is not None:
             backend.close()

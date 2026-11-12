@@ -794,13 +794,19 @@ def run(args):
             args.paths, settings, getattr(args, "task", None)
         )
         results = _process_standalone(grouped, items, settings)
+        from partiflow.ui import message, show_report
+
         if settings.get("plan"):
-            print(json.dumps({"postprocess": results}, indent=2))
+            report = {"postprocess": results}
+            if not show_report("Postprocessing plan", report):
+                print(json.dumps(report, indent=2))
         else:
-            print(
+            message(
                 f"Postprocess: {sum(r['status'] == 'success' for r in results)}/{len(results)} structures complete"
             )
         return int(any(result["status"] == "failed" for result in results))
     except (OSError, ValueError, KeyError) as exc:
-        print(f"Postprocess failed: {exc}")
+        from partiflow.ui import show_error
+
+        show_error(f"Postprocess failed: {exc}")
         return 1

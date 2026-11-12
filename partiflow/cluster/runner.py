@@ -366,6 +366,8 @@ def run_paths(
     plan=False,
 ) -> int:
     """Cluster each saved criterion independently, with no model initialization."""
+    from partiflow.ui import message
+
     if (
         isinstance(threshold, bool)
         or not isinstance(threshold, (int, float))
@@ -390,7 +392,7 @@ def run_paths(
         else os.cpu_count() or 1
     )
     active = min(workers, available, len(jobs))
-    print(
+    message(
         f"Cluster directories: {len(jobs)}; workers: {active}; CPU threads per worker: 1",
         flush=True,
     )
@@ -400,7 +402,7 @@ def run_paths(
         count = _comparison_count(data)
         pair_count += count
         if plan:
-            print(
+            message(
                 f"PLAN {job.task_dir} method={job.method} "
                 f"successful_backbones={len(data.samples)} criteria={','.join(sorted(data.groups)) or '(none)'} "
                 f"pairs={count}",
@@ -425,14 +427,15 @@ def run_paths(
                         result = process_job(job, options)
                     except Exception as error:
                         failures += 1
-                        print(
+                        message(
                             f"FAILED {job.task_dir} method={job.method}: "
                             f"{type(error).__name__}: {error}",
                             file=sys.stderr,
+                            failed=True,
                             flush=True,
                         )
                     else:
-                        print("DONE " + json.dumps(result, sort_keys=True), flush=True)
+                        message("DONE " + json.dumps(result, sort_keys=True), flush=True)
             else:
                 with ProcessPoolExecutor(
                     max_workers=active,
@@ -448,14 +451,15 @@ def run_paths(
                             result = future.result()
                         except Exception as error:
                             failures += 1
-                            print(
+                            message(
                                 f"FAILED {job.task_dir} method={job.method}: "
                                 f"{type(error).__name__}: {error}",
                                 file=sys.stderr,
+                                failed=True,
                                 flush=True,
                             )
                         else:
-                            print(
+                            message(
                                 "DONE " + json.dumps(result, sort_keys=True), flush=True
                             )
     finally:
@@ -464,5 +468,5 @@ def run_paths(
                 os.environ.pop(name, None)
             else:
                 os.environ[name] = value
-    print(f"Completed directories: {len(jobs) - failures}/{len(jobs)}", flush=True)
+    message(f"Completed directories: {len(jobs) - failures}/{len(jobs)}", flush=True)
     return 2 if failures else 0

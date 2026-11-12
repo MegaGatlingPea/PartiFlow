@@ -8,6 +8,19 @@ partiflow download --list
 
 Targets are `partiflow`, `partiflow-aux`, `partiflow-dock`, `partiflow-ss`, `autoencoder`, `af2`, `proteinmpnn`, `solublempnn`, and `pepinter`. `--list` is read-only. `--all` selects every target, including those needing a local source.
 
+## Choose resources in a terminal
+
+```bash
+partiflow download
+partiflow download --from-local weights
+```
+
+When both input and output are terminals, omitting targets opens a cyan, framed resource selector. Use Up/Down to browse, Space to select, and Enter to download or import the selected targets. Tab moves to the action and Back buttons. Esc or Ctrl-D returns without acquiring anything; Ctrl-C interrupts with exit status 130. An empty selection stays in the selector.
+
+The local-presence tick is separate from the selection checkbox. Targets without a configured source remain visible with an explanation; use `--from-local` or `--url` to provide that source. Already complete targets are skipped unless `--force` is supplied. `--url` still requires exactly one selected target.
+
+The selector needs `prompt-toolkit`, installed by the package and environment definitions. With redirected input/output, `TERM=dumb`, or the renderer unavailable, provide target names, `--all`, or `--list` explicitly. `NO_COLOR` uses a monochrome selector. Help and other terminal reports fall back to plain output under `NO_COLOR`.
+
 ## Import local files
 
 ```bash
@@ -38,4 +51,4 @@ partiflow download proteinmpnn \
 
 Existing complete targets are skipped unless `--force` is supplied. Failed or incomplete transfers do not replace an existing destination. The command continues through independent targets and reports each outcome.
 
-`--model-dir` selects the [model root](../resources.md#choose-a-model-directory). For PepInter, `--data-dir` selects the destination. Alternatively, `--config` composes a training YAML, including its Hydra defaults, and resolves the dataset path using the training path rules. Imports use the standard `indexes/` and `processed/` layout; see [training data](../resources.md#prepare-training-data). Terminal output shows progress by processed target and a result table; redirected output contains one JSON record per target.
+`--model-dir` selects the [model root](../resources.md#choose-a-model-directory). For PepInter, `--data-dir` selects the destination. Alternatively, `--config` composes a training YAML, including its Hydra defaults, and resolves the dataset path using the training path rules. Imports use the standard `indexes/` and `processed/` layout; see [training data](../resources.md#prepare-training-data). Terminal output shows the selected targets and source before acquisition, progress by processed target, and a framed result table. Counts describe completed targets rather than transfer bytes. Redirected output contains one JSON record per target.

@@ -21,4 +21,4 @@ partiflow check --model partiflow --model autoencoder --smoke
 
 `--model-dir` selects the model root. Add `--data-dir` or a training `--config` to check PepInter's split and processed files. `check` on a task file checks its basic schema and paths; use `design --show-config` to inspect design settings before generation.
 
-Terminal output uses readable status tables. Redirected output is a JSON report, suitable for scripts. A failed check returns a nonzero exit status; import the missing target or correct the reported path before repeating it.
+Terminal output shows the selected operation and models before checking, then framed resource groups, explicit load or smoke results, and a final status. Help lists the resource targets and their uses. Redirected output is a JSON report, suitable for scripts. A failed check returns a nonzero exit status; import the missing target or correct the reported path before repeating it.
