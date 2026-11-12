@@ -255,7 +255,7 @@ klk2_all_topology_compact:
 # CPSet Topology Docking Examples
 # ======================================================================
 
-# A small CPSet-derived smoke panel kept in the general example selector.
+# CPSet docking examples.
 # Reference PDBs live in ./pdbs/cpset/{pdb_id}.pdb and keep CPSet chain/residue numbering.
 
 cpset_3avb_head_tail:

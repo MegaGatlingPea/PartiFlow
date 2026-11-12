@@ -13,4 +13,11 @@ prune ckpts
 
 recursive-include configs/scaffolds *.pt
 
-recursive-include tests *.py
+prune tests
+prune acceptance
+prune pdbs/protdbench
+prune pdbs/design/il13ra
+recursive-exclude configs *acceptance* *smoke*
+
+recursive-exclude partiflow test_*.py
+exclude partiflow/postprocess/validation.py

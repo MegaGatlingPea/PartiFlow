@@ -112,7 +112,7 @@ python -m partiflow.training.prepare_data --archive train_data/archives/pepinter
   --root train_data/pepinter
 ```
 
-For an already extracted `train_data/pepinter/raw/` tree, replace `--archive ...` with `--skip-extract`. Without `--subset`, preprocessing covers the full source splits. Adding `--subset` prepares only the fixed 64 train and 16 validation samples; use `configs/training_vae_acceptance.yaml` or `configs/training_fm_acceptance.yaml` for that subset. The regular training configs use the full split index and need all indexed graphs.
+For an already extracted `train_data/pepinter/raw/` tree, replace `--archive ...` with `--skip-extract`. Without `--subset`, preprocessing covers the full source splits. The regular training configs use the full split index and need all indexed graphs.
 
 `--config` on `download` and `check` composes the training YAML, including Hydra defaults, and uses its resolved `datamodule.processed_dir` to locate the dataset root. A top-level `data_dir` takes precedence; explicit `--data-dir` overrides both. These resource commands require `indexes/` and `processed/` under the selected data root. For another training layout, import to an explicit standard-layout directory and point the training config at the imported files. Confirm the split fields and preprocessing settings before [training](commands/train.md).
 

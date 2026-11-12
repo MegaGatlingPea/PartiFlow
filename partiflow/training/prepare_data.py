@@ -101,14 +101,14 @@ def build_indexes(root: Path, *, verify_counts: bool = True) -> tuple[Path, Path
     if len(identifiers) != len(set(identifiers)):
         raise ValueError("PepInter identifiers occur in multiple source splits")
     full_path = index_dir / "split.csv"
-    subset_path = index_dir / "acceptance.csv"
+    subset_path = index_dir / "subset.csv"
     _write_rows(full_path, rows)
     subset = []
     for split, size in (("train", 64), ("val", 16)):
         selected = [row for row in rows if row["split"] == split][:size]
         if verify_counts and len(selected) != size:
             raise ValueError(
-                f"Insufficient rows for the fixed {split} acceptance subset"
+                f"Insufficient rows for the fixed {split} subset"
             )
         subset.extend(selected)
     _write_rows(subset_path, subset)
@@ -157,7 +157,7 @@ def main(argv=None) -> int:
     parser.add_argument(
         "--subset",
         action="store_true",
-        help="Prepare the fixed 64 train / 16 val acceptance rows",
+        help="Prepare the fixed 64 train / 16 val subset rows",
     )
     parser.add_argument("--skip-extract", action="store_true")
     parser.add_argument(

@@ -1,4 +1,4 @@
-"""Small real diagnostic runs; formal acceptance uses full generation schedules."""
+"""Small real diagnostic runs for the public resource-check command."""
 
 from __future__ import annotations
 import tempfile

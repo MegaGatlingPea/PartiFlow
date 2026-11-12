@@ -26,3 +26,11 @@ __pycache__/
 *.safetensors
 
 !/configs/scaffolds/*.pt
+
+/tests
+/acceptance
+/configs/**/*acceptance*
+/configs/**/*smoke*
+/pdbs/protdbench/
+/pdbs/design/il13ra/
+/configs/tasks/protdbench.yaml

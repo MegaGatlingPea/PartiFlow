@@ -4,7 +4,6 @@ A motif task uses selected sequence identities and all-atom geometry from a refe
 
 ```bash
 partiflow design configs/tasks/example.yaml --task klk2_motif --out inference/motif
-partiflow design configs/tasks/motif.yaml --task peptide01_top01_motif --show-config
 ```
 
 Coordinates pass through the VAE decoder, so the generated motif geometry can differ slightly from the reference. Subsequent relaxation can move it further.
@@ -27,4 +26,4 @@ my_motif:
 
 Sampled topology anchors are restricted to generated positions. Identity constraints must agree with retained motif residues. Optional relaxation has its own coordinate-movement settings; the motif's generation constraints and later relaxation are separate stages.
 
-The [motif task file](../../configs/tasks/motif.yaml) contains further reference-derived examples. Detailed secondary-structure and adjacency conditions can be added with the specialized checkpoint described in [scaffold conditions](../scaffolds.md).
+Detailed secondary-structure and adjacency conditions can be added with the specialized checkpoint described in [scaffold conditions](../scaffolds.md).

@@ -1,12 +1,12 @@
 # PartiFlow Official Development and Validation
 
-Read the sections relevant to the current task. All project paths are relative to the selected official checkout. When implementation changes, inspect current source and tests before updating the workflow; this reference does not replace the source.
+Read the sections relevant to the current task. All project paths are relative to the selected official checkout. When implementation changes, inspect current source and external developer checks before updating the workflow; this reference does not replace the source.
 
 ## Source Map
 
 | Behavior | Inspect first |
 | --- | --- |
-| Public commands and lazy loading | `partiflow/cli.py`, `tests/test_cli_public.py` |
+| Public commands and lazy loading | `partiflow/cli.py`, `partiflow/ui.py` |
 | Original task YAML and configuration composition | `partiflow/design/config.py`, `partiflow/design/tasks.py`, `configs/tasks/`, `docs/task_schema.md` |
 | Public CSV output | `partiflow/common/results.py`, `partiflow/design/runtime.py` |
 | Reward and sequence policies | `partiflow/workflows/reward.py` and neighboring `reward_backend.py` and `sequence.py`; `configs/reward/af2.yaml`, `configs/sequence.yaml` |
@@ -57,7 +57,7 @@ Changing from `filter: false` to `filter: true` reuses completed geometry. Thres
 - For an ordinary checkpoint paired with EMA and for direct EMA restoration, check optimizer moments, EMA parameters and counters, global step, scheduler, and the next actual parameter update. Successful loading does not establish full restoration or promise bitwise-identical random trajectories.
 - Preserve the narrow repair in `partiflow/training/loops.py` for Lightning's completed-epoch boundary. Validate completed and partial epochs separately, avoiding skipped or repeated boundaries while retaining native partial-epoch behavior.
 - Compile only forward calls while preserving module hierarchy and strict weight keys. In `partiflow/training/compilation.py`, training and evaluation forwards use separate code objects and independent specialization banks. Inspect both entry points through `forward.compiled_forwards`. Do not globally increase Dynamo cache limits or silently fall back to eager execution on failure.
-- For real tiny training checks, use `python -m partiflow.training.prepare_data` to select a fixed **64 training / 16 validation** subset from the original real PepInter splits, with `configs/training_vae_acceptance.yaml` and `configs/training_fm_acceptance.yaml`. Report the actual splits, training and validation counts, optimization steps, loss values and finiteness, and checkpoint/restoration behavior. These are software acceptance checks, not model convergence or benchmark results.
+- For real tiny training checks, use `python -m partiflow.training.prepare_data` to select a fixed **64 training / 16 validation** subset from the original real PepInter splits, with private training configurations kept outside the release checkout. Report the actual splits, training and validation counts, optimization steps, loss values and finiteness, and checkpoint/restoration behavior. These are software checks, not model convergence or benchmark results.
 
 ## Chemical Identity and Postprocessing
 
@@ -77,35 +77,18 @@ Calculate the selected PartiFlow preset's required metrics and dependencies. Its
 
 Publish completed geometry and a small record before optional native metrics, so a C++ metric crash cannot erase successful relaxation. Keep process-local source and Pose objects out of Ray results and saved records. Preserve task-level `result.csv` publication/rollback: earlier successfully published tasks survive a later task's publication failure, while concurrent uncommitted work is stopped before rollback. Scientific filter failure retains the structure. Preserve the public identity, constraint locators, reward values, and ranks.
 
-## Focused Validation and Releases
+## Validation and Releases
 
-Choose existing tests relevant to the change. This table is a routing aid, not a mandatory full suite for every task. All filenames below are within `tests/`.
+Keep developer tests, small-step training configurations, and generated reports in a separate development workspace. They do not belong in the published checkout, wheel, or source distribution. Run relevant checks against the selected checkout through its explicit source path; do not reintroduce private checks into public `configs/`.
 
-| Change | Focused tests |
-| --- | --- |
-| CLI and output | `test_cli_public.py`, `test_design_contract.py`, `test_workflow_contract.py` |
-| Reward, sequence, and AF2 | `test_reward_configuration.py`, `test_reward_candidate_failure.py`, `test_sequence_schema.py`, `test_af2_contract.py` |
-| Cached results and postprocessing | `test_validate_structure_state.py`, `test_postprocess_resume.py`, `test_postprocess_backend_override.py`, `test_postprocess_publication.py`, `test_postprocess_dispatch.py` |
-| Training | `test_training_contract.py`, `test_training_epoch_resume.py`, `test_training_compile.py`, `test_data_contract.py` |
-| Native chemistry | `test_native_sources.py`, `test_native_acceptance.py`, `test_postprocess_metrics.py`, `test_postprocess_routing.py` |
-| Packaging | `test_package_resources.py`, `test_wheel_records.py`, `test_download_assets.py` |
+The main thread coordinates model and GPU checks. Inspect idle devices first, execute serially, and do not preempt other processes. For a release, verify CLI and configuration parsing, installed resource resolution, packaged chemistry assets, and execution appropriate to the changed behavior. Retain vendor copyright and source-attribution files.
 
-For example, after a CLI-only change, run from the checkout:
-
-```bash
-PYTHONDONTWRITEBYTECODE=1 python -B -m unittest discover -s tests -p test_cli_public.py -v
-```
-
-The main thread coordinates model/GPU checks within the user's task. Inspect idle devices first, execute serially, and do not preempt or kill other processes.
-
-For releases, verify installed resource resolution and packaged configurations and chemistry resources. Retain executable tests, small-data configurations, and vendor copyright and source-attribution files. Keep model weights, training data, run outputs, private logs and generated reports, development acceptance records, and temporary figures/assets out of release commits. Do not upload logs as repository documentation. Export release figures from canonical paper sources according to the user's selected display set, and identify their sources. Do not invent benchmarks or turn tiny training results into performance claims. Commit only within the current user's authorization; do not push automatically.
+Keep model weights, training data, run outputs, private logs, and temporary assets outside release commits. User documentation explains installation and supported workflows. Performance claims use the original figure definitions or actual measurements. Commit and publish only within the current user's authorization.
 
 In the requested reporting language, distinguish code/configuration checks, actual loading, real execution, tiny training, quality filtering, and convergence. Report only commands executed for the current task and their observed results, with necessary code and figure source references. Do not attach historical pass tables or full machine logs.
 
 Apply the project's source and release cleanup constraints without adding content digests, fingerprints, or tracking wrappers, including renamed or alternate-algorithm versions of the same mechanism, to owned or vendored source. Compare and retain computation-relevant chemical parameters, atoms, bonds, charges, structure mappings, configurations, and restoration state directly. Keep cleanup-check commands and project-specific exclusion lists outside the repository. Do not monkeypatch internals of externally installed dependencies.
 
 For a formal distribution, confirm that wheel platform tags match bundled native binaries. Let build tools generate the standard `RECORD`; do not manually empty its fields to satisfy source-content cleanup constraints. A successful local pip installation does not establish compliance with publishing specifications. If an explicit zero-occurrence rule includes mandatory distribution metadata, explain the format conflict and resolve its scope before release. Do not restore application-level content-tracking wrappers.
-
-Reusable native checks are in `tests/acceptance/`: `training.py` checks public CLI runs and separately instrumented full-state resumes, `core.py` compares original and current model execution, `workflows.py` inspects fresh design outputs, and `chemistry.py` checks native types and topology. `validation.py`, `resources.py`, `package.py`, and `data.py` cover paired AF2 recovery, asset handling, independent installation, and the real graph pipeline. Read each tool's help and pass explicit external output/resource roots. Do not substitute old default fixture paths for a current run. Keep generated outputs outside the checkout.
 
 CLI presentation lives in `partiflow/ui.py`: cyan terminal output without a logo; redirected output keeps machine-readable behavior. Ordinary help and resource inventory must stay free of heavy model imports.

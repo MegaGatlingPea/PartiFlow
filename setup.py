@@ -18,6 +18,10 @@ EXCLUDED_DIRS = {
     "inference",
     "runs",
     "weights",
+    "tests",
+    "acceptance",
+    "protdbench",
+    "il13ra",
 }
 EXCLUDED_SUFFIXES = {
     ".pyc",
@@ -42,6 +46,10 @@ def allowed(path):
     )
     return (
         not any(part in EXCLUDED_DIRS for part in path.parts)
+        and path.as_posix().removeprefix("partiflow/") != "postprocess/validation.py"
+        and not (path.suffix == ".py" and path.name.startswith("test_"))
+        and not ("configs" in path.parts and any(label in path.name.lower()
+                                                 for label in ("acceptance", "smoke")))
         and (path.suffix not in EXCLUDED_SUFFIXES or scaffold)
     )
 
