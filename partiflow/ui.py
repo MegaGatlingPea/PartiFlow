@@ -20,12 +20,12 @@ RESOURCE_USAGE = {
     "af2": "AF2 structure prediction, validation and reward",
     "proteinmpnn": "ProteinMPNN sequence design",
     "solublempnn": "SolubleMPNN sequence design",
-    "pepinter": "PepInter training data with split and processed files",
+    "pepinter": "Original PepInter structures; preprocess before training",
 }
 _STATUS_STYLES = {
     "present": "green", "complete": "green", "loaded": "green",
-    "downloaded": "green", "imported": "green", "skipped": "dim",
-    "missing": "yellow", "unavailable": "yellow", "unconfigured": "yellow",
+    "downloaded": "green", "skipped": "dim",
+    "missing": "yellow", "unavailable": "yellow",
     "failed": "bold red",
 }
 
@@ -349,8 +349,10 @@ def _asset_groups(console, records, root, *, listing=False):
         rows = []
         for item in selected:
             detail = _resource_detail(item, root)
+            if item["target"] == "pepinter" and "training_data_ready" in item:
+                detail += "\nRaw archive; preprocess before training"
             if listing:
-                source = "Configured download URL" if item.get("url_configured") else "Supply --from-local or --url"
+                source = item.get("url") or "Use --url to choose a download source"
                 detail += "\n" + source
             rows.append((item["target"], item["status"], detail))
         _status_table(console, rows)
@@ -431,14 +433,13 @@ def activity(label):
 class DownloadDisplay:
     """Show completed target counts without guessing transfer byte counts."""
 
-    def __init__(self, root, targets, *, source=None, url=None, force=False):
+    def __init__(self, root, targets, *, url=None, force=False):
         self.root = root
         self.targets = list(targets)
         self.console = _console()
         self.progress = None
         self.task = None
         self.records = []
-        self.source = source
         self.url = url
         self.force = force
 
@@ -451,10 +452,9 @@ class DownloadDisplay:
             from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
             from rich.table import Column
 
-            _banner(self.console, "Download / import", self.root)
+            _banner(self.console, "Download", self.root)
             _fields(self.console, [("Selected targets", ", ".join(self.targets)),
-                                   ("Source", str(self.source) if self.source else
-                                    "Explicit URL" if self.url else "Configured download URLs"),
+                                   ("Source", "Explicit URL" if self.url else "Configured download URLs"),
                                    ("Existing files", "Replace" if self.force else "Skip complete targets")])
             columns = [SpinnerColumn(spinner_name="line", style=ACCENT),
                        TextColumn("{task.description}", markup=False,
@@ -482,7 +482,7 @@ class DownloadDisplay:
             self.progress.stop()
         if self.console is not None and self.records:
             _asset_groups(self.console, self.records, self.root)
-            failed = sum(item["status"] in {"failed", "unconfigured"} for item in self.records)
+            failed = sum(item["status"] == "failed" for item in self.records)
             self.console.print()
             self.console.print(_text(f"Processed {len(self.records)} targets; {failed} failed or unavailable",
                                      "bold red" if failed else "green"))

@@ -27,7 +27,7 @@ The public entry point is `partiflow`, with these seven commands. Confirm argume
 | Relaxation and optional quality filtering | `postprocess PATH...` with `--filter true` or `--filter false`; `partiflow/postprocess/` |
 | Structural clustering | `cluster PATH...`; `partiflow/cluster/` |
 | Resource status or explicit loading and execution checks | `check`; the default checks paths, while `--load` and `--smoke` execute models |
-| Resource retrieval or import | `download`; `--list` shows the manifest, and current resource definitions determine model and data resolution |
+| Model and dataset downloads | `download`; PartiFlow weights and raw PepInter download from the public Hugging Face repository; `--list` shows all sources |
 
 For `train` and `design`, `--show-config` validates configuration resolution only. The default for `postprocess` is `--filter false`. Thresholds come exclusively from the selected `configs/preset.yaml` or `--presets` file.
 

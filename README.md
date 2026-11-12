@@ -14,14 +14,14 @@ conda activate partiflow-official
 partiflow --help
 ```
 
-Put your PartiFlow checkpoint files in a local `weights/` directory, then import the general model and its autoencoder:
+Download the general model and its autoencoder from [Hugging Face](https://huggingface.co/MegaGatlingPea/PartiFlow):
 
 ```bash
-partiflow download partiflow autoencoder --from-local weights
+partiflow download partiflow autoencoder
 partiflow check
 ```
 
-PartiFlow weights and PepInter data are supplied separately; this release has no default download URL for them. The [installation and resource guide](docs/resources.md) covers other checkpoints, AF2/MPNN weights, and installation from a wheel.
+The [installation and resource guide](docs/resources.md) covers the other checkpoints, AF2/MPNN weights, PepInter data, and installation from a wheel.
 
 ## Make a first design
 
@@ -71,6 +71,7 @@ Next, [validate](docs/commands/validate.md) candidates with paired AF2 predictio
 All four models use `autoencoder.ckpt`. Select the checkpoint explicitly when changing model capabilities. For the bundled [scaffold examples](docs/scaffolds.md):
 
 ```bash
+partiflow download partiflow-ss
 partiflow design configs/tasks/scaffold.yaml --task klk2_scaffold_linear \
   --ckpt ./ckpts/partiflow-ss.ckpt --out inference/scaffold_linear
 ```

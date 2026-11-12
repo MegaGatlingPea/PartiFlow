@@ -171,8 +171,8 @@ def parser():
     resources.add_argument("--data-dir", type=Path, help="PepInter data root; also checks its split and processed files")
 
     download = commands.add_parser(
-        "download", help="Download configured assets or import existing local files",
-        description="List resource status, download configured assets, or import local files.",
+        "download", help="Download model weights and training data",
+        description="Download model weights and training data from their published sources.",
         epilog="Example: partiflow download --list",
     )
     download.add_argument("targets", nargs="*", help="Resource target names; omit for the terminal selector, or use --list")
@@ -180,9 +180,8 @@ def parser():
     selection.add_argument("--list", action="store_true", help="List resource paths and configured download availability")
     selection.add_argument("--all", action="store_true", help="Select all configured model and data targets")
     selection.add_argument("--force", action="store_true", help="Replace existing files when acquiring selected targets")
-    source = download.add_argument_group("source").add_mutually_exclusive_group()
-    source.add_argument("--from-local", type=Path, help="Import a local file, directory, or supported archive")
-    source.add_argument("--url", help="Custom HTTP, HTTPS, or file URL for exactly one target")
+    source = download.add_argument_group("source")
+    source.add_argument("--url", help="Custom HTTP or HTTPS URL for exactly one target")
     resources = download.add_argument_group("resource paths")
     _model_directory(resources)
     resources.add_argument("--data-dir", type=Path, help="Destination root for PepInter data")

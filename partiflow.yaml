@@ -189,6 +189,11 @@ dependencies:
   - yarl==1.25.1
   - zope.event==6.2
   - zope.interface==8.7
+  - huggingface_hub==2.2.0
+  - hf-xet==1.8.0
+  - httpx2==2.16.0
+  - httpcore2==2.16.0
+  - truststore==0.10.5
   - -e .
 variables:
   XLA_PYTHON_CLIENT_PREALLOCATE: 'false'

@@ -7,7 +7,7 @@ num_sanity_val_steps: 0
 data_preparation:
   enabled: false
   root: ./train_data/pepinter
-  archive: ./train_data/archives/pepinter.tar.xz
+  archive: ./train_data/pepinter/pepinter.tar.xz
   subset: false
   extract: false
 

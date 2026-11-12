@@ -1,6 +1,7 @@
-"""Explicit model/data acquisition with atomic local and URL imports."""
+"""Explicit downloads from the published model and data sources."""
 
 from __future__ import annotations
+import errno
 import json
 import os
 import shutil
@@ -17,17 +18,19 @@ from partiflow.ui import DownloadDisplay, RESOURCE_USAGE, message, show_inventor
 
 MPNN_URL = "https://raw.githubusercontent.com/dauparas/ProteinMPNN/8907e6671bfbfc92303b5f79c4b5e6ce47cdef57"
 AF2_URL = "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar"
+HF_REPO = "MegaGatlingPea/PartiFlow"
+HF_BASE = f"https://huggingface.co/{HF_REPO}/resolve/main"
+PEPINTER_URL = f"{HF_BASE}/data/pepinter.tar.xz"
 
 
 @dataclass(frozen=True)
 class Asset:
     relative: str
     url: str | None = None
-    aliases: tuple[str, ...] = ()
 
 
 TARGETS = {
-    name: (Asset(f"ckpts/{name}.ckpt"),)
+    name: (Asset(f"ckpts/{name}.ckpt", f"{HF_BASE}/ckpts/{name}.ckpt"),)
     for name in (
         "partiflow",
         "partiflow-aux",
@@ -45,22 +48,12 @@ TARGETS["proteinmpnn"] = (
     Asset(
         "proteinmpnn/vanilla/v_48_020.pt",
         f"{MPNN_URL}/vanilla_model_weights/v_48_020.pt",
-        (
-            "vanilla/v_48_020.pt",
-            "community_models/proteinmpnn/checkpoint/vanilla/v_48_020.pt",
-        ),
     ),
 )
 TARGETS["solublempnn"] = (
     Asset(
         "proteinmpnn/soluble/v_48_020.pt",
         "https://files.ipd.uw.edu/pub/ligandmpnn/solublempnn_v_48_020.pt",
-        (
-            "soluble/solublempnn_v_48_020.pt",
-            "soluble/v_48_020.pt",
-            "solublempnn_v_48_020.pt",
-            "community_models/proteinmpnn/checkpoint/soluble/v_48_020.pt",
-        ),
     ),
 )
 MODEL_TARGETS = tuple(TARGETS)
@@ -120,6 +113,9 @@ def resource_status(target, root, *, data_dir=None, config=None):
             "target": target,
             "status": "present" if all(checks.values()) else "missing",
             "path": str(path),
+            "archive": str(path / "pepinter.tar.xz"),
+            "archive_present": (path / "pepinter.tar.xz").is_file()
+            and (path / "pepinter.tar.xz").stat().st_size > 0,
             "checks": {key: bool(value) for key, value in checks.items()},
         }
     files = [
@@ -206,32 +202,51 @@ def _is_archive(path):
     )
 
 
-def _find_local(root, asset):
-    candidates = [root / asset.relative, root / Path(asset.relative).name]
-    candidates.extend(root / name for name in asset.aliases)
-    if asset.relative.startswith("af2/"):
-        candidates.append(
-            root / "community_models" / "colabdesign" / "checkpoint" / asset.relative
-        )
-    for path in candidates:
+def _find_asset(root, asset):
+    for path in (root / asset.relative, root / Path(asset.relative).name):
         if path.is_file() and path.stat().st_size:
             return path
-    matches = [
-        path
-        for path in root.rglob(Path(asset.relative).name)
-        if path.is_file() and path.stat().st_size
-    ]
+    matches = [path for path in root.rglob(Path(asset.relative).name)
+               if path.is_file() and path.stat().st_size]
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
-        raise ValueError(f"Ambiguous local asset: {asset.relative}")
-    raise FileNotFoundError(f"Local source has no {asset.relative}")
+        raise ValueError(f"Ambiguous downloaded asset: {asset.relative}")
+    raise FileNotFoundError(f"Download has no {asset.relative}")
+
+
+def _download_hub(parsed, destination):
+    parts = parsed.path.strip("/").split("/")
+    if (parsed.scheme != "https" or parsed.netloc != "huggingface.co"
+            or len(parts) < 5 or parts[2] != "resolve"):
+        return False
+    from huggingface_hub import hf_hub_download
+
+    repo = "/".join(parts[:2])
+    revision = urllib.parse.unquote(parts[3])
+    filename = urllib.parse.unquote("/".join(parts[4:]))
+    try:
+        fetched = hf_hub_download(
+            repo_id=repo, filename=filename, revision=revision,
+            endpoint="https://huggingface.co", token=False,
+            local_dir=Path(destination).parent / "hub-download",
+        )
+    except Exception as exc:
+        code = getattr(getattr(exc, "response", None), "status_code", None)
+        detail = f"HTTP {code}" if code else type(exc).__name__
+        raise OSError(f"Hugging Face download failed for {repo}/{filename}: {detail}") from None
+    os.replace(fetched, destination)
+    return True
 
 
 def _fetch(url, destination):
     parsed = urllib.parse.urlsplit(url)
-    if parsed.scheme not in {"https", "http", "file"}:
-        raise ValueError("URL must use https, http, or file")
+    if parsed.scheme not in {"https", "http"}:
+        raise ValueError("URL must use https or http")
+    if _download_hub(parsed, destination):
+        if not Path(destination).stat().st_size:
+            raise ValueError("Hugging Face returned an empty file")
+        return
     with (
         urllib.request.urlopen(url, timeout=120) as reader,
         Path(destination).open("wb") as writer,
@@ -253,6 +268,12 @@ def _fetch(url, destination):
 
 def _publish_file(source, destination):
     destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.replace(source, destination)
+        return
+    except OSError as exc:
+        if exc.errno != errno.EXDEV:
+            raise
     fd, temporary = tempfile.mkstemp(
         prefix="." + destination.name, suffix=".tmp", dir=destination.parent
     )
@@ -266,137 +287,89 @@ def _publish_file(source, destination):
         Path(temporary).unlink(missing_ok=True)
 
 
-def _import_pepinter(source, destination, *, force):
-    roots = [source, source / "pepinter", source / "train_data" / "pepinter"]
-    roots.extend(path.parent for path in source.rglob("indexes") if path.is_dir())
-    candidate = next(
-        (
-            path
-            for path in roots
-            if (path / "indexes" / "split.csv").is_file()
-            and (path / "processed").is_dir()
-        ),
-        None,
-    )
-    if candidate is None:
-        raise ValueError("PepInter source needs indexes/split.csv and processed/")
-    files = [
-        path
-        for folder in ("indexes", "processed")
-        for path in (candidate / folder).rglob("*")
-        if path.is_file()
-    ]
-    if not any(path.is_relative_to(candidate / "processed") for path in files):
-        raise ValueError("PepInter processed/ is empty")
-    for path in files:
-        final = destination / path.relative_to(candidate)
-        if force or not final.is_file():
-            _publish_file(path, final)
-    return destination
+def _source_url(target):
+    if target == "af2":
+        return AF2_URL
+    if target == "pepinter":
+        return PEPINTER_URL
+    return TARGETS[target][0].url
 
 
-def acquire(
-    target, root, *, from_local=None, url=None, force=False, data_dir=None, config=None
-):
+def download_status(target, root, *, data_dir=None, config=None):
+    record = resource_status(target, root, data_dir=data_dir, config=config)
+    if target == "pepinter":
+        record = {
+            **record, "data_dir": record["path"], "path": record["archive"],
+            "training_data_ready": record["status"] == "present",
+            "status": "present" if record["archive_present"] else "missing",
+        }
+        record["prepare_command"] = [
+            "python", "-m", "partiflow.training.prepare_data",
+            "--archive", record["archive"], "--root", record["data_dir"],
+        ]
+    return record
+
+
+def acquire(target, root, *, url=None, force=False, data_dir=None, config=None):
     if target not in TARGETS:
         raise ValueError(f"Unknown download target: {target}")
+    if url and urllib.parse.urlsplit(url).scheme not in {"http", "https"}:
+        raise ValueError("URL must use https or http")
     root = Path(root).expanduser().resolve()
-    existing = resource_status(target, root, data_dir=data_dir, config=config)
+    existing = download_status(target, root, data_dir=data_dir, config=config)
     if existing["status"] == "present" and not force:
         return {**existing, "status": "skipped"}
-    if (
-        not from_local
-        and not url
-        and target not in {"af2", "proteinmpnn", "solublempnn"}
-    ):
-        return {
-            "target": target,
-            "status": "unconfigured",
-            "error": "No public URL is configured; use --from-local or --url",
-        }
-    root.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-        prefix=".partiflow-import-", dir=root
-    ) as temporary:
+    source_url = url or _source_url(target)
+    if not source_url:
+        raise ValueError(f"No download URL is configured for {target}")
+    destination_root = data_root(root, data_dir=data_dir, config=config) if target == "pepinter" else root
+    destination_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".partiflow-download-", dir=destination_root) as temporary:
         stage = Path(temporary)
-        source = Path(from_local).expanduser().resolve() if from_local else None
-        if source and not source.exists():
-            raise FileNotFoundError(source)
-        source_url = url or (AF2_URL if target == "af2" and source is None else None)
-        if source_url:
-            source_name = (
-                Path(urllib.parse.unquote(urllib.parse.urlsplit(source_url).path)).name
-                or "download.bin"
-            )
-            source = stage / (
-                "download.tar" if target == "af2" else "download-" + source_name
-            )
-            _fetch(source_url, source)
-        if (
-            source
-            and source.is_file()
-            and (_is_archive(source) or target in {"af2", "pepinter"})
-        ):
+        source_name = Path(urllib.parse.unquote(urllib.parse.urlsplit(source_url).path)).name or "download.bin"
+        source = stage / ("download.tar" if target == "af2" else source_name)
+        _fetch(source_url, source)
+        if target == "pepinter":
+            if not tarfile.is_tarfile(source):
+                raise ValueError("PepInter download is not a readable structure archive")
+            _publish_file(source, destination_root / "pepinter.tar.xz")
+            return {**download_status(target, root, data_dir=destination_root), "status": "downloaded"}
+        if _is_archive(source) or target == "af2":
             extracted = stage / "extracted"
             extract_archive(source, extracted)
             source = extracted
-        if target == "pepinter":
-            if source is None or not source.is_dir():
-                raise ValueError("PepInter import requires a directory or archive")
-            destination = _import_pepinter(
-                source, data_root(root, data_dir=data_dir, config=config), force=force
-            )
-            return {
-                **resource_status(target, root, data_dir=destination),
-                "status": "imported",
-            }
         pending = []
-        for index, asset in enumerate(TARGETS[target]):
+        for asset in TARGETS[target]:
             destination = root / asset.relative
             if destination.is_file() and destination.stat().st_size > 0 and not force:
                 continue
-            if source is not None:
-                if source.is_file():
-                    if len(TARGETS[target]) != 1:
-                        raise ValueError(
-                            f"{target} requires all configured assets in a directory/archive"
-                        )
-                    selected = source
-                else:
-                    selected = _find_local(source, asset)
+            if source.is_file():
+                if len(TARGETS[target]) != 1:
+                    raise ValueError(f"{target} requires all configured assets in the downloaded archive")
+                selected = source
             else:
-                if not asset.url:
-                    raise ValueError(f"No configured URL for {asset.relative}")
-                selected = stage / f"asset{index}"
-                _fetch(asset.url, selected)
+                selected = _find_asset(source, asset)
             if not selected.stat().st_size:
-                raise ValueError(f"Empty source asset: {selected}")
+                raise ValueError(f"Empty downloaded asset: {selected}")
             pending.append((selected, destination))
         for selected, destination in pending:
             _publish_file(selected, destination)
-    return {
-        **resource_status(target, root),
-        "status": "imported" if from_local else "downloaded",
-    }
+    return {**resource_status(target, root), "status": "downloaded"}
 
 
 def _selection_options(args, root):
-    """Read local paths and source availability without opening model files."""
+    """Read paths and configured sources without opening model files or the network."""
     options = []
-    supplied = bool(getattr(args, "from_local", None) or getattr(args, "url", None))
     for name in TARGETS:
-        record = resource_status(name, root, data_dir=getattr(args, "data_dir", None),
+        record = download_status(name, root, data_dir=getattr(args, "data_dir", None),
                                  config=getattr(args, "config", None))
-        configured = name in {"af2", "proteinmpnn", "solublempnn"}
-        skipped = record["status"] == "present" and not getattr(args, "force", False)
-        source = ("Import source: " + Path(args.from_local).name if getattr(args, "from_local", None) else
-                  "Use explicit URL" if getattr(args, "url", None) else
-                  "Configured download URL" if configured else
-                  "Supply --from-local or --url to acquire this target")
-        detail = RESOURCE_USAGE[name] + "\nStatus: " + record["status"] + "\n" + source
-        if skipped:
+        source = "Explicit download URL" if getattr(args, "url", None) else _source_url(name)
+        detail = RESOURCE_USAGE[name] + "\nStatus: " + record["status"] + "\nSource: " + source
+        if record["status"] == "present" and not getattr(args, "force", False):
             detail += "\nAlready present; existing files will be skipped"
-        options.append({**record, "selectable": skipped or configured or supplied, "detail": detail})
+        if name == "pepinter":
+            detail += "\nRaw archive; run data preprocessing before training"
+        options.append({**record, "selectable": True, "detail": detail})
     return options
 
 
@@ -414,13 +387,14 @@ def run(args):
         interactive = terminal_output()
         records = []
         for name in targets or TARGETS:
-            status = resource_status(
+            status = download_status(
                 name,
                 root,
                 data_dir=getattr(args, "data_dir", None),
                 config=getattr(args, "config", None),
             )
-            status["url_configured"] = name in {"af2", "proteinmpnn", "solublempnn"}
+            status["url_configured"] = bool(_source_url(name))
+            status["url"] = _source_url(name)
             if interactive:
                 records.append(status)
             else:
@@ -433,8 +407,7 @@ def run(args):
 
         if not can_prompt():
             raise ValueError("Provide download targets, --all, or --list")
-        targets = select_downloads(_selection_options(args, root), root,
-                                   importing=bool(getattr(args, "from_local", None)))
+        targets = select_downloads(_selection_options(args, root), root)
         if not targets:
             message("Cancelled")
             return 0
@@ -442,15 +415,14 @@ def run(args):
         raise ValueError("--url requires exactly one target")
     failed = False
     targets = list(dict.fromkeys(targets))
-    with DownloadDisplay(root, targets, source=getattr(args, "from_local", None),
-                         url=getattr(args, "url", None), force=getattr(args, "force", False)) as display:
+    with DownloadDisplay(root, targets, url=getattr(args, "url", None),
+                         force=getattr(args, "force", False)) as display:
         for target in targets:
             display.begin(target)
             try:
                 result = acquire(
                     target,
                     root,
-                    from_local=getattr(args, "from_local", None),
                     url=getattr(args, "url", None),
                     force=getattr(args, "force", False),
                     data_dir=getattr(args, "data_dir", None),
@@ -465,5 +437,5 @@ def run(args):
             display.complete(result)
             if not display.active:
                 print(json.dumps(result))
-            failed |= result["status"] in {"failed", "unconfigured"}
+            failed |= result["status"] == "failed"
     return int(failed)

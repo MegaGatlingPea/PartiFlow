@@ -14,31 +14,31 @@ partiflow --help
 
 The recipe installs the checkout with `-e .`. The command-line package alone does not install the full training, AF2, and molecular-mechanics runtimes. Generation uses the configured accelerator; the bundled design settings request one GPU with mixed bfloat16 precision.
 
-## Prepare the checkpoints
+## Download the checkpoints
 
-For a first denovo or motif design, import `partiflow.ckpt` and `autoencoder.ckpt` from your local `weights/` directory:
+The five PartiFlow checkpoints are hosted in [MegaGatlingPea/PartiFlow](https://huggingface.co/MegaGatlingPea/PartiFlow). Download the general model and its autoencoder for a first denovo or motif design:
 
 ```bash
-partiflow download partiflow autoencoder --from-local weights
+partiflow download partiflow autoencoder
 partiflow check
 ```
 
-Import other PartiFlow checkpoints when needed:
+Download the other PartiFlow checkpoints as needed:
 
 ```bash
-partiflow download partiflow-aux partiflow-ss --from-local weights
+partiflow download partiflow-aux partiflow-dock partiflow-ss
 ```
 
 The general model serves denovo and motif tasks; the auxiliary model serves docking, inverse folding, and packing. Use `partiflow-ss.ckpt` for secondary-structure, scaffold-topology, and disulfide conditioning. `partiflow-dock.ckpt` is the specialist used for the CPSet-separated docking comparison. Each uses the same autoencoder. The design command keeps the default general checkpoint until you select another with `--ckpt`.
 
-PartiFlow checkpoints and PepInter have no configured public download URL. Use `--from-local` or provide your own `--url`. Configured AF2 and MPNN sources are available through:
+AF2 and the two MPNN variants download from their official sources:
 
 ```bash
 partiflow download af2 proteinmpnn solublempnn
 partiflow check --model af2 --model proteinmpnn --model solublempnn
 ```
 
-`download --list` shows target names, local status, and download availability. AF2 reward needs Multimer v3 parameters; paired validation uses pTM parameters. The AF2 target prepares models 1–5 in original, pTM, and Multimer v3 forms. Use [check --load](commands/check.md) when you want to test actual CPU loading after the files are present.
+`download --list` shows target names, paths, and download availability. AF2 reward needs Multimer v3 parameters; paired validation uses pTM parameters. The AF2 target prepares models 1–5 in original, pTM, and Multimer v3 forms. Use [check --load](commands/check.md) to test actual CPU loading after the files are present.
 
 ## Choose a model directory
 
@@ -62,7 +62,7 @@ Training data is configured separately. Moving weights with `--model-dir` does n
 For example, to keep weights in a separate `models/` directory:
 
 ```bash
-partiflow download partiflow autoencoder --from-local weights --model-dir models
+partiflow download partiflow autoencoder --model-dir models
 partiflow check --model-dir models
 partiflow design configs/tasks/example.yaml --task klk2_hotspot --model-dir models \
   --out inference/klk2
@@ -98,22 +98,19 @@ cp "$PARTIFLOW_RESOURCES/pdbs/design/klk2/klk2_motif.pdb" inputs/klk2.pdb
 
 ## Prepare training data
 
-A local PepInter dataset needs `indexes/split.csv` and nonempty `processed/` contents. Import it into the default layout or choose a separate data directory:
+Download the original PepInter archive from the same Hugging Face repository, then build the atom37 graphs:
 
 ```bash
-partiflow download pepinter --from-local datasets/pepinter --data-dir train_data/pepinter
+partiflow download pepinter --data-dir train_data/pepinter
+python -m partiflow.training.prepare_data \
+  --archive train_data/pepinter/pepinter.tar.xz --root train_data/pepinter
 partiflow check --data-dir train_data/pepinter
 ```
 
-The import command expects a prepared dataset. For the raw PepInter archive, extract it and build atom37 graphs first:
+`download pepinter` saves only the raw archive. It does not extract structures or start preprocessing. The archive contains 166,019 training, 3,750 validation, and 1,250 test structures. Preprocessing preserves those splits and maps `valid` to the internal `val` name. Without `--subset`, it builds graphs for all 171,019 structures. The regular training configs use the full split index and need all indexed graphs.
 
-```bash
-python -m partiflow.training.prepare_data --archive train_data/archives/pepinter.tar.xz \
-  --root train_data/pepinter
-```
+The downloaded archive alone is not a prepared training dataset. The data-path check requires `indexes/split.csv` and nonempty `processed/` contents; inspect preprocessing failures before starting training. For an already extracted `train_data/pepinter/raw/` tree, replace `--archive ...` with `--skip-extract`.
 
-For an already extracted `train_data/pepinter/raw/` tree, replace `--archive ...` with `--skip-extract`. Without `--subset`, preprocessing covers the full source splits. The regular training configs use the full split index and need all indexed graphs.
-
-`--config` on `download` and `check` composes the training YAML, including Hydra defaults, and uses its resolved `datamodule.processed_dir` to locate the dataset root. A top-level `data_dir` takes precedence; explicit `--data-dir` overrides both. These resource commands require `indexes/` and `processed/` under the selected data root. For another training layout, import to an explicit standard-layout directory and point the training config at the imported files. Confirm the split fields and preprocessing settings before [training](commands/train.md).
+`--data-dir` selects the dataset root and places the archive at `DATA_DIR/pepinter.tar.xz`. `--config` on `download` and `check` composes the training YAML, including Hydra defaults, and uses its resolved data paths to locate the dataset root. A top-level `data_dir` takes precedence over the datamodule paths; explicit `--data-dir` overrides both. Point the training config at the same `indexes/` and `processed/` directories. Confirm the split fields and preprocessing settings before [training](commands/train.md).
 
 In training configurations, relative pretrained checkpoint and autoencoder paths use the model root. Other relative paths in a bundled config use the checkout root for source installations and the invocation directory for wheel installations. Other relative paths in a user training config use that config file's directory.

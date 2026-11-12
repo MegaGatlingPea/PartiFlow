@@ -23,7 +23,7 @@ def _literal(value: object) -> str:
 
 
 def select_downloads(
-    options: Sequence[Mapping[str, object]], root, *, importing: bool = False
+    options: Sequence[Mapping[str, object]], root
 ) -> list[str] | None:
     """Return selected names in catalog order; local presence is a separate tick."""
     if not options:
@@ -43,7 +43,7 @@ def select_downloads(
     names = list(records)
     enabled = {name for name, item in records.items() if item.get("selectable")}
     error = [None, ""]
-    action = "Import" if importing else "Download"
+    action = "Download"
 
     def detail_text(name):
         return "\n".join(_literal(line) for line in str(records[name].get("detail", "")).splitlines())
@@ -151,7 +151,7 @@ def select_downloads(
         fitted_label(status),
         fitted_label(guide),
     ])
-    title = "PartiFlow / Resource " + ("imports" if importing else "downloads")
+    title = "PartiFlow / Resource downloads"
     dialog = Dialog(
         title=title,
         body=body,
