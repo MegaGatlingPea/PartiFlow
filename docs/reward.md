@@ -24,7 +24,7 @@ reward = 0.25 × (design_plddt / 100) + 0.75 × interface_iptm
 
 `structure_source: fold` publishes the reward-predicted structure before task postprocessing. `structure_source: design` keeps the design coordinates and requires its sequence to remain compatible with those side chains. The shared sequence policy can retain the generated sequence or use ProteinMPNN/SolubleMPNN while respecting fixed identities.
 
-Prepare the AF2 parameters before running reward. Import MPNN weights as well if the selected sequence policy uses them; see [resources](resources.md).
+Prepare the AF2 parameters before running reward. Download MPNN weights as well if the selected sequence policy uses them; see [resources](resources.md).
 
 Reward is calculated before task relaxation, so its stored metrics keep that meaning after relaxation. Later [paired AF2 validation](commands/validate.md) uses a different protocol and can apply [quality presets](presets.md). A reward rank by itself does not imply that a candidate passed those criteria.
 

@@ -23,7 +23,8 @@ def _literal(value: object) -> str:
 
 
 def select_downloads(
-    options: Sequence[Mapping[str, object]], root
+    options: Sequence[Mapping[str, object]], root, *,
+    default_values: Sequence[str] = (),
 ) -> list[str] | None:
     """Return selected names in catalog order; local presence is a separate tick."""
     if not options:
@@ -74,7 +75,7 @@ def select_downloads(
             ("class:model" if name in enabled else "class:disabled", _literal(name)),
         ]
         values.append((name, fragments))
-    choices = ResourceChoices(values, default_values=[])
+    choices = ResourceChoices(values, default_values=[name for name in default_values if name in enabled])
     choices.control.key_bindings.remove("enter")
     choices.window.height = Dimension(min=1, preferred=min(10, len(values)), max=len(values))
 

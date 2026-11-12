@@ -21,6 +21,7 @@ AF2_URL = "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.
 HF_REPO = "MegaGatlingPea/PartiFlow"
 HF_BASE = f"https://huggingface.co/{HF_REPO}/resolve/main"
 PEPINTER_URL = f"{HF_BASE}/data/pepinter.tar.xz"
+DEFAULT_TARGETS = ("autoencoder", "partiflow", "partiflow-ss", "partiflow-aux")
 
 
 @dataclass(frozen=True)
@@ -405,12 +406,18 @@ def run(args):
     if not targets:
         from partiflow.interactive import can_prompt, select_downloads
 
-        if not can_prompt():
-            raise ValueError("Provide download targets, --all, or --list")
-        targets = select_downloads(_selection_options(args, root), root)
-        if not targets:
-            message("Cancelled")
-            return 0
+        if can_prompt():
+            defaults = () if getattr(args, "url", None) else DEFAULT_TARGETS
+            targets = select_downloads(
+                _selection_options(args, root), root, default_values=defaults
+            )
+            if not targets:
+                message("Cancelled")
+                return 0
+        else:
+            if getattr(args, "url", None):
+                raise ValueError("--url requires an explicit target outside a terminal")
+            targets = list(DEFAULT_TARGETS)
     if getattr(args, "url", None) and len(targets) != 1:
         raise ValueError("--url requires exactly one target")
     failed = False

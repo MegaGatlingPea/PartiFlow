@@ -16,17 +16,17 @@ The recipe installs the checkout with `-e .`. The command-line package alone doe
 
 ## Download the checkpoints
 
-The five PartiFlow checkpoints are hosted in [MegaGatlingPea/PartiFlow](https://huggingface.co/MegaGatlingPea/PartiFlow). Download the general model and its autoencoder for a first denovo or motif design:
+The five PartiFlow checkpoints are hosted in [MegaGatlingPea/PartiFlow](https://huggingface.co/MegaGatlingPea/PartiFlow). The recommended set includes the autoencoder, general, scaffold-conditioned, and auxiliary models:
 
 ```bash
-partiflow download partiflow autoencoder
+partiflow download autoencoder partiflow partiflow-ss partiflow-aux
 partiflow check
 ```
 
-Download the other PartiFlow checkpoints as needed:
+Running `partiflow download` also selects those four by default. In a terminal they are checked in the selector; noninteractive use downloads them directly. Download the docking specialist separately when needed:
 
 ```bash
-partiflow download partiflow-aux partiflow-dock partiflow-ss
+partiflow download partiflow-dock
 ```
 
 The general model serves denovo and motif tasks; the auxiliary model serves docking, inverse folding, and packing. Use `partiflow-ss.ckpt` for secondary-structure, scaffold-topology, and disulfide conditioning. `partiflow-dock.ckpt` is the specialist used for the CPSet-separated docking comparison. Each uses the same autoencoder. The design command keeps the default general checkpoint until you select another with `--ckpt`.

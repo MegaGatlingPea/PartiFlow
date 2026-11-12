@@ -1,9 +1,9 @@
 # Download resources
 
-Download the general PartiFlow checkpoint and its autoencoder:
+Download the four recommended weights: `autoencoder`, `partiflow`, `partiflow-ss`, and `partiflow-aux`:
 
 ```bash
-partiflow download partiflow autoencoder
+partiflow download
 partiflow check
 ```
 
@@ -19,7 +19,7 @@ partiflow download af2 proteinmpnn solublempnn
 
 Targets are `partiflow`, `partiflow-aux`, `partiflow-dock`, `partiflow-ss`, `autoencoder`, `af2`, `proteinmpnn`, `solublempnn`, and `pepinter`. Every target has a default source. `--list` is read-only; `--all` downloads all nine targets, including the PepInter archive.
 
-In a terminal, run `partiflow download` without targets to open the resource selector. Use Up/Down to browse, Space to select, and Enter to download. Tab moves to the Download and Back buttons. Esc or Ctrl-D returns without downloading; Ctrl-C exits with status 130. An empty selection stays in the selector.
+With no targets, a terminal opens the resource selector with those four weights preselected; noninteractive use downloads the four directly. Explicit target names replace the default set. `partiflow-dock` remains optional. Use Up/Down to browse, Space to select, and Enter to download. Tab moves to the Download and Back buttons. Esc or Ctrl-D returns without downloading; Ctrl-C exits with status 130. An empty selection stays in the selector.
 
 The presence tick is separate from the selection checkbox. Existing complete downloads are skipped unless `--force` is supplied. With redirected input/output or `TERM=dumb`, provide target names, `--all`, or `--list` explicitly. `NO_COLOR` uses a monochrome selector and plain reports.
 

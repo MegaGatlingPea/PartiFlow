@@ -10,7 +10,7 @@ Start with [installation and resources](resources.md) and the [one-sample design
 | `cluster` | [Structural clustering](commands/cluster.md) | Group selected binder backbones with US-align |
 | `train` | [Training](commands/train.md) | Train the VAE or flow-matching model |
 | `check` | [Resource checks](commands/check.md) | Inspect local files or explicitly test model loading/execution |
-| `download` | [Downloads and imports](commands/download.md) | Prepare model weights and training data |
+| `download` | [Download resources](commands/download.md) | Prepare model weights and training data |
 
 The five task families share the same [task YAML format](task_schema.md): [denovo](tasks/denovo.md), [motif](tasks/motif.md), [docking](tasks/docking.md), [inverse folding](tasks/inverse-folding.md), and [packing](tasks/packing.md).
 

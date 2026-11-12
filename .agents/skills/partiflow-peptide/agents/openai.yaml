@@ -1,7 +1,7 @@
 interface:
   display_name: "PartiFlow Peptide"
-  short_description: "Maintain PartiFlow official workflows and training"
-  default_prompt: "Use $partiflow-peptide to maintain the selected PartiFlow official checkout and verify the requested change."
+  short_description: "Design and assess peptide binders with PartiFlow"
+  default_prompt: "Use $partiflow-peptide to help me choose and run a peptide-design workflow, then explain its outputs and next steps."
 
 policy:
   allow_implicit_invocation: true

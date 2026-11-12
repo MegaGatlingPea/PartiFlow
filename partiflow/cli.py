@@ -170,12 +170,18 @@ def parser():
     resources.add_argument("--config", type=Path, help="Training YAML used to locate PepInter data")
     resources.add_argument("--data-dir", type=Path, help="PepInter data root; also checks its split and processed files")
 
+    from .download import DEFAULT_TARGETS
+
     download = commands.add_parser(
         "download", help="Download model weights and training data",
         description="Download model weights and training data from their published sources.",
         epilog="Example: partiflow download --list",
     )
-    download.add_argument("targets", nargs="*", help="Resource target names; omit for the terminal selector, or use --list")
+    download.add_argument(
+        "targets", nargs="*",
+        help="Resource targets (default: " + ", ".join(DEFAULT_TARGETS)
+        + "). A terminal opens the selector with these weights selected.",
+    )
     selection = download.add_argument_group("selection")
     selection.add_argument("--list", action="store_true", help="List resource paths and configured download availability")
     selection.add_argument("--all", action="store_true", help="Select all configured model and data targets")

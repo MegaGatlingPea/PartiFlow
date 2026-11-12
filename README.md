@@ -14,12 +14,14 @@ conda activate partiflow-official
 partiflow --help
 ```
 
-Download the general model and its autoencoder from [Hugging Face](https://huggingface.co/MegaGatlingPea/PartiFlow):
+Download the recommended models from [Hugging Face](https://huggingface.co/MegaGatlingPea/PartiFlow):
 
 ```bash
-partiflow download partiflow autoencoder
+partiflow download
 partiflow check
 ```
+
+The default set contains `autoencoder`, `partiflow`, `partiflow-ss`, and `partiflow-aux`. In a terminal, these four are preselected; press Enter to download them. `partiflow-dock` is an optional specialist.
 
 The [installation and resource guide](docs/resources.md) covers the other checkpoints, AF2/MPNN weights, PepInter data, and installation from a wheel.
 

@@ -13,7 +13,7 @@ partiflow design configs/tasks/scaffold.yaml --task klk2_scaffold_terminal_disul
   --ckpt ./ckpts/partiflow-ss.ckpt --out inference/scaffold_terminal_disulfide
 ```
 
-Import `partiflow-ss` and `autoencoder` first, as described in [resources](resources.md). Add `--show-config` to inspect any example before generation. If your weights are under a separate `models/` root, use `--model-dir models --ckpt ./models/ckpts/partiflow-ss.ckpt`.
+Download `partiflow-ss` and `autoencoder` first, as described in [resources](resources.md). Add `--show-config` to inspect any example before generation. If your weights are under a separate `models/` root, use `--model-dir models --ckpt ./models/ckpts/partiflow-ss.ckpt`.
 
 ## Select a library and preset
 
