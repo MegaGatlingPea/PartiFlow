@@ -39,9 +39,10 @@ class PackageResourceTests(unittest.TestCase):
                 shutil.copytree(
                     ROOT / name,
                     checkout / name,
-                    ignore=shutil.ignore_patterns(
-                        "__pycache__", "*.pyc", "*.ckpt", "*.pt", "*.pth", "*.npz"
-                    ),
+                    ignore=lambda directory, names: shutil.ignore_patterns(
+                        "__pycache__", "*.pyc", "*.ckpt", "*.pth", "*.npz",
+                        *([] if Path(directory).name == "scaffolds" else ["*.pt"]),
+                    )(directory, names),
                 )
             output = Path(temporary) / "lib"
             completed = subprocess.run(
@@ -60,6 +61,7 @@ class PackageResourceTests(unittest.TestCase):
                 "postprocess/rosetta_ncaa/params/Z28.params",
                 "postprocess/bin/DAlphaBall.gcc",
                 "_vendor/proteinmpnn/protein_mpnn_utils.py",
+                "_resources/configs/scaffolds/linpep_archetype_scaffold_lib.pt",
             ):
                 self.assertTrue((package / relative).is_file(), relative)
             for source in (ROOT / "pdbs").rglob("*.pdb"):
@@ -81,6 +83,7 @@ class PackageResourceTests(unittest.TestCase):
                     str(path)
                     for path in output.rglob("*")
                     if path.is_file() and path.suffix in forbidden
+                    and not (path.suffix == ".pt" and path.parent.name == "scaffolds")
                 ]
             )
             self.assertEqual(

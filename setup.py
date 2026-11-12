@@ -2,12 +2,8 @@
 
 from pathlib import Path
 import shutil
-import csv
-import io
-import os
-import tempfile
-import zipfile
-from setuptools import setup
+import platform
+from setuptools import Distribution, setup
 from setuptools.command.build_py import build_py
 from setuptools.command.bdist_wheel import bdist_wheel
 
@@ -40,9 +36,13 @@ EXCLUDED_SUFFIXES = {
 
 
 def allowed(path):
+    scaffold = path.suffix == ".pt" and (
+        path.parts[:2] == ("configs", "scaffolds")
+        or path.parts[:3] == ("_resources", "configs", "scaffolds")
+    )
     return (
         not any(part in EXCLUDED_DIRS for part in path.parts)
-        and path.suffix not in EXCLUDED_SUFFIXES
+        and (path.suffix not in EXCLUDED_SUFFIXES or scaffold)
     )
 
 
@@ -68,43 +68,31 @@ class BuildResources(build_py):
             executable.chmod(executable.stat().st_mode | 0o111)
 
 
-class DistributionWheel(bdist_wheel):
-    """Keep distribution records limited to filenames and actual sizes."""
+class NativeDistribution(Distribution):
+    def has_ext_modules(self):
+        return True
 
-    def run(self):
-        super().run()
-        for command, _, filename in self.distribution.dist_files:
-            if command != "bdist_wheel":
-                continue
-            wheel = Path(filename)
-            fd, name = tempfile.mkstemp(dir=wheel.parent, suffix=".whl.tmp")
-            os.close(fd)
-            temporary = Path(name)
-            try:
-                with (
-                    zipfile.ZipFile(wheel) as source,
-                    zipfile.ZipFile(temporary, "w") as output,
-                ):
-                    for info in source.infolist():
-                        data = source.read(info.filename)
-                        if info.filename.endswith(".dist-info/RECORD"):
-                            rows = list(csv.reader(io.StringIO(data.decode())))
-                            for row in rows:
-                                row[1] = ""
-                            text = io.StringIO()
-                            csv.writer(text, lineterminator="\n").writerows(rows)
-                            data = text.getvalue().encode()
-                        output.writestr(info, data)
-                temporary.chmod(wheel.stat().st_mode & 0o777)
-                os.replace(temporary, wheel)
-            finally:
-                temporary.unlink(missing_ok=True)
+
+class PlatformWheel(bdist_wheel):
+    """The bundled executable makes this a platform-specific distribution."""
+
+    def finalize_options(self):
+        if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
+            raise RuntimeError("The bundled DAlphaBall executable requires Linux x86_64")
+        super().finalize_options()
+        self.root_is_pure = False
+
+    def get_tag(self):
+        _, _, platform = super().get_tag()
+        return "py3", "none", platform
 
 
 setup(
-    cmdclass={"build_py": BuildResources, "bdist_wheel": DistributionWheel},
+    distclass=NativeDistribution,
+    cmdclass={"build_py": BuildResources, "bdist_wheel": PlatformWheel},
     package_data={
         "partiflow": [
+            "openfold/License",
             "utils/relax_assets/*",
             "postprocess/rosetta_ncaa/*.csv",
             "postprocess/rosetta_ncaa/*.yaml",

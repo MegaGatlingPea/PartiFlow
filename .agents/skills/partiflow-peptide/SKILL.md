@@ -11,6 +11,7 @@ Maintain the selected PartiFlow official checkout and its public behavior. First
 
 - Use a dedicated environment based on the repository's `partiflow.yaml`. Inspect the existing interpreter and resources before making environment changes; keep other project environments outside the task.
 - Start from `partiflow/cli.py`, `configs/`, and relevant tests. Read `docs/commands/` as needed. Preserve the original named PartiFlow task YAML files and their task semantics.
+- Fine scaffold and secondary-structure conditioning requires explicit `partiflow-ss.ckpt`; this is intentional. See `docs/scaffolds.md` and the bundled `configs/tasks/scaffold.yaml`. Do not silently select weights or add new model guards for this requirement.
 - Preserve model mathematics, parameter hierarchy, and checkpoint ABI. Ordinary weights, EMA weights, and full training restoration must each remain valid.
 - Original PartiFlow, PartiDesign comparison code, and paper projects are read-only comparison material when the task needs them. Modifying another project requires an explicit task for that project.
 

@@ -24,3 +24,5 @@ __pycache__/
 *.pth
 *.npz
 *.safetensors
+
+!/configs/scaffolds/*.pt

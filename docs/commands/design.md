@@ -1,23 +1,58 @@
-# Design
+# Generate designs
+
+`design` reads a YAML file containing named tasks. Select one or more names with `--task`; without it, every task in the file runs.
 
 ```bash
 partiflow design configs/tasks/example.yaml --task klk2_hotspot --out inference/klk2
-partiflow design configs/tasks/example.yaml --task klk2_docking --ckpt ckpts/partiflow-aux.ckpt --out inference/docking
 partiflow design configs/tasks/example.yaml --task klk2_motif --show-config
+partiflow design configs/tasks/example.yaml --task klk2_docking \
+  --ckpt ./ckpts/partiflow-aux.ckpt --out inference/docking
 ```
 
-The positional file contains named [tasks](../task_schema.md). Repeat `--task NAME` to select several entries; omitting it selects every entry in that file. `--config FILE` merges a design configuration, and repeatable `--override KEY=VALUE` options update the Hydra configuration. Named options are `--ckpt`, `--out`, `--run-name`, `--seed`, `--batch-size`, `--num-workers`, `--compile true|false`, and `--model-dir`. A named option and an override cannot both set its mapped field. `--show-config` resolves configuration without generation or full task compilation.
+Choose the task's [checkpoint](../../README.md#choose-a-task-and-checkpoint) explicitly. The default is the general model. [Scaffold and topology conditioning](../scaffolds.md) uses `partiflow-ss.ckpt`; docking, inverse folding, and packing normally use `partiflow-aux.ckpt`.
 
-[configs/design.yaml](../../configs/design.yaml) composes generation, search, and optional reward settings. `--out` selects the exact run directory. Otherwise `output.root_dir` and `output.run_name` determine it. Selected task directories must be absent or empty at launch. Each task keeps its final PDB structures, `result.csv`, `resolved_config.yaml`, logs, and private workflow state.
+## Configuration
 
-Raw sampling writes `sample<base>.pdb`. Optional [best-of-N AF2 reward](../reward.md) retains ranked candidates as `sample<base>_<chain>_rank<rank>.pdb`. Base IDs start at one within each task and span its expanded length plan. Failed planned bases remain represented in the result table; a failed row does not invent a structure filename.
+The [default configuration](../../configs/design.yaml) composes generation, search, and optional reward settings. `--config FILE` adds a YAML overlay. Repeat `--override KEY=VALUE` for Hydra updates:
 
-The raw `result.csv` header has exactly 15 columns, in this order:
-
-```csv
-filename,design_chains,base_sample_id,design_modality,design_chain_id,token_length,reward_method,global_rank,design_sequence,contig_string,tip_atoms,fixed_restypes,bond_constraints,postprocess_status,error
+```bash
+partiflow design configs/tasks/example.yaml --task klk2_hotspot \
+  --override seed=2026 --batch-size 4 --num-workers 0 \
+  --compile false --out inference/klk2_small
 ```
 
-The writer inserts actual numeric reward metric columns, sorted by name, between `bond_constraints` and `postprocess_status`. The 13 leading fields and two trailing fields retain their order. Missing metrics stay blank. `design_chains`, `fixed_restypes`, and `bond_constraints` contain JSON arrays tied to the final published structure. Identity constraints and declared bond endpoints use its chain, residue, and atom locators; successful unconstrained samples use empty constraint arrays. Independent validation and postprocessing reports keep their own metrics and decisions.
+A task's non-null `sample_num` takes priority over the global value, so change the task YAML when you need a different count for an existing task. Requested lengths multiply that count: `klk2_hotspot` requests one sample at each length from 11 through 20.
 
-Raw sampling and optional reward ranking share the generation implementation. Task postprocessing retains the production OpenMM/Rosetta chemistry routes and runs after reward calculation. Reward metrics therefore describe the reward prediction before subsequent relaxation. A completed generation does not establish structural quality or binding; use [validate](validate.md) and explicit [postprocess criteria](postprocess.md) for their computational assessments.
+Named options include `--ckpt`, `--out`, `--run-name`, `--seed`, `--batch-size`, `--num-workers`, `--compile true|false`, and `--model-dir`. A named option and an override cannot both set the same configuration field. The defaults use batch size 16, 16 data-loader workers, and compilation disabled. `--show-config` prints the resolved settings and exits before generation.
+
+`--out` chooses the exact run directory. Otherwise the default is `inference/design`, formed from `output.root_dir` and `output.run_name`. Each selected task directory must be absent or empty. For another run, choose a fresh output directory or a new run name.
+
+## Read the output
+
+Each task has its own directory:
+
+```text
+inference/klk2/klk2_hotspot/
+  sample1.pdb
+  sample2.pdb
+  ...
+  result.csv
+  resolved_config.yaml
+  logs/
+```
+
+Raw generation uses `sample<base>.pdb`. Base IDs start at one and span the task's expanded length and condition plan. [Best-of-N search](../reward.md) writes ranked candidates as `sample<base>_<chain>_rank<rank>.pdb`.
+
+| Result field | Meaning |
+| --- | --- |
+| `filename` | Published PDB; empty if no structure was produced |
+| `base_sample_id`, `token_length` | Planned sample identity and generated binder length |
+| `design_sequence`, `design_chain_id`, `design_chains` | Sequence and chain identities in the published structure |
+| `reward_method`, `global_rank` | Optional reward and rank within the task/length group |
+| `contig_string`, `tip_atoms` | Retained task and geometric conditioning information |
+| `fixed_restypes`, `bond_constraints` | Fixed identities and declared bonds, stored as JSON arrays |
+| `postprocess_status`, `error` | Relaxation outcome and any failure details |
+
+Without reward metrics, `result.csv` has 15 columns. Numeric reward metrics are added before `postprocess_status` and `error`; missing values stay blank. Failed planned samples remain in the table. Use the `filename` field to find actual structures.
+
+Task postprocessing runs after reward calculation. Reward columns therefore describe the reward prediction before subsequent relaxation. Independent validation and postprocessing have their own metric reports. To assess saved candidates, continue with [AF2 validation](validate.md) or [relaxation and quality filtering](postprocess.md).

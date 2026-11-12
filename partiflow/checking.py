@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from partiflow.download import MODEL_TARGETS, resource_status
 from partiflow.paths import config_dir, model_root, resource_root
+from partiflow.ui import activity, show_check
 
 
 def check_task(path):
@@ -176,7 +177,8 @@ def run(args):
                 )
                 continue
             try:
-                report["loads"].append(_load_model(status["target"], root))
+                with activity(f"Loading {status['target']} on CPU"):
+                    report["loads"].append(_load_model(status["target"], root))
             except Exception as exc:
                 report["loads"].append(
                     {
@@ -197,11 +199,12 @@ def run(args):
             try:
                 from partiflow.design import run_smoke
 
-                result = run_smoke(
-                    task_file=getattr(args, "task_file", None),
-                    model_dir=root,
-                    models=selected,
-                )
+                with activity("Running model smoke test"):
+                    result = run_smoke(
+                        task_file=getattr(args, "task_file", None),
+                        model_dir=root,
+                        models=selected,
+                    )
                 complete = (type(result) is int and result == 0) or (
                     isinstance(result, dict)
                     and result.get("status") in {"success", "complete"}
@@ -218,5 +221,6 @@ def run(args):
                 }
                 failed = True
     report["status"] = "failed" if failed else "complete"
-    print(json.dumps(report, indent=2, default=str))
+    if not show_check(report):
+        print(json.dumps(report, indent=2, default=str))
     return int(failed)

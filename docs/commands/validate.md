@@ -1,21 +1,70 @@
-# Validation
+# Validate with paired AF2 predictions
+
+Validation predicts the receptor–peptide complex and the isolated peptide using the same sequence. This compares confidence in the bound pose with the peptide's independently predicted conformation.
+
+Prepare `af2` and `solublempnn` weights, inspect the work, then run:
 
 ```bash
-partiflow validate inference/klk2 --plan
-partiflow validate inference/klk2 --source gt:1 --source soluble_mpnn:1 --model-dir /path/to/models
-partiflow validate inference/klk2 --criteria af2_ig_peptide --refilter
+partiflow validate inference/first --plan
+partiflow validate inference/first --criteria af2_ig_peptide
 ```
 
-Inputs are one or more run/task paths, `result.csv` files, or supported structure files. Repeat `--task` to select tasks, `--source SOURCE:COUNT` to select sequence branches, and `--criteria NAME` to select named criteria. `--config FILE` merges validation settings, `--presets FILE` supplies criteria definitions, `--limit N` limits input rows within each task, and `--model-dir` resolves local checkpoints. `--rerun` explicitly recomputes requested work after an input or protocol change.
+Inputs can be run directories, task directories, `result.csv` files, or supported structure files. Repeat `--task` to select tasks and use `--limit N` to limit rows within each task. `--model-dir` selects local model weights. `--config FILE` overlays the [validation settings](../../configs/validate.yaml), and `--presets FILE` selects a quality-preset YAML.
 
-Validation executes serially in one owner process. AF2 and MPNN models remain resident across requests and close at the end. There are no per-worker CPU/GPU allocation options. Execution uses the active process's visible device; plan separate invocations explicitly when separate devices are needed.
+## Sequences and prediction settings
 
-`--plan`, `--refilter`, and `--recompute-metrics` are mutually exclusive. Planning inspects the selected work. Refiltering reevaluates saved metrics; metric recomputation reads saved predictions and confidence arrays without running AF2 or MPNN. Missing predictions stay incomplete. `--rerun` cannot be combined with either cache-update mode. Completed prediction slots resume under matching saved inputs and settings; changed inputs or protocol settings require `--rerun`.
+The defaults request two sequence branches for each design: one original sequence (`gt`, labeled `self`) and one SolubleMPNN sequence. Both run paired pTM complex and monomer predictions with model 1, one sample, and three recycles. The default criteria list is empty, so add `--criteria af2_ig_peptide` when you want pass/fail decisions.
 
-[configs/validate.yaml](../../configs/validate.yaml) defaults to one original sequence (`gt`, label `self`) and one SolubleMPNN sequence, pTM model 1, one sample, and three recycles. `af2.models` accepts an ordered unique subset of `[1, 2]`; each model/sample runs an initial-guess complex protocol and an independent binder monomer protocol using the same sequence. Sequence sources are `gt`, `proteinmpnn`, and `solublempnn`, with documented aliases such as `self`, `protein_mpnn`, and `soluble_mpnn`. Appending `-fi` to an MPNN source retains its original interface identities in addition to fixed task identities.
+To compare all three supported sequence sources, also prepare the ProteinMPNN weights and select the branches explicitly:
 
-AF2 accepts standard protein residues and representable protein topology in the design and every context chain. Nonstandard residues, unsupported atoms, ligands, and other unsupported chemistry are reported explicitly as `not_applicable` with an `unsupported_chemistry` reason. They are not silently replaced by canonical residues, even when an MPNN redesign was requested. Source numbering, insertion codes, chain identity, and confidence arrays remain associated with each supported prediction. Cyclic offset encoding does not establish physical ring closure in a refold.
+```bash
+partiflow validate inference/first \
+  --source gt:1 --source proteinmpnn:1 --source solublempnn:1 \
+  --criteria af2_ig_peptide --rerun
+```
 
-Each task writes `validate/af2_ig/metrics.csv`, `success.csv`, `summary.json`, and per-sample sequence slots under `refolds/`. Original design structures and `result.csv` identities remain intact. The default criteria list is empty, which collects metrics without a pass/fail preset. Add `--criteria af2_ig_peptide` during validation or refiltering to publish that cohort for [clustering](cluster.md).
+`--source` replaces the default source list. `--rerun` is needed when changing an existing run's branch settings; omit it for a fresh validation run. Source aliases include `self`, `protein_mpnn`, and `soluble_mpnn`. An MPNN source ending in `-fi` also retains original interface identities, in addition to the task's fixed identities.
 
-The exact thresholds and comparison operators live in [configs/preset.yaml](../../configs/preset.yaml). `af2_ig_peptide` uses `all_and_mean`: every configured complex, monomer, and paired comparison must satisfy the applicable rules, together with their means. Confidence fractions are on a 0–1 scale, normalized PAE is distinct from PAE in angstroms, and paired bound/unbound RMSD is in angstroms. Missing required metrics yield `unavailable`; metrics from different predictions are never mixed to manufacture a pass.
+Use a YAML overlay for other prediction settings. For example:
+
+```yaml
+af2:
+  models: [1, 2]
+  samples: 1
+  recycles: 3
+```
+
+`af2.models` accepts an ordered, unique subset of `[1, 2]`. Each configured model/sample produces a complex prediction and a separate monomer prediction. Models remain loaded across requests in one process. To choose another visible GPU, set its visibility before launching a separate command.
+
+## Read the results
+
+Each task writes:
+
+```text
+TASK/validate/af2_ig/
+  metrics.csv
+  success.csv
+  summary.json
+  refolds/
+```
+
+`metrics.csv` contains prediction and paired-comparison metrics. `success.csv` records the sequence branches passing each requested criterion. `summary.json` summarizes the requested and observed work and criterion counts. `refolds/` contains the saved sequence branches, structures, and confidence data. Validation leaves design PDBs and the design result table intact.
+
+The [AF2 quality preset](../presets.md#paired-af2-criteria) requires confidence thresholds and agreement between bound and unbound peptide structures. A completed prediction can fail those rules. Missing required predictions or metrics produce `unavailable`.
+
+AF2 supports standard protein residues and representable protein topology in every chain. Unsupported nonstandard chemistry, ligands, or atoms produce `not_applicable` with an `unsupported_chemistry` reason. MPNN redesign does not remove this input restriction. Cyclic positional encoding alone does not physically close a refolded peptide ring.
+
+## Continue or update a run
+
+Repeat the original command to fill missing work and reuse completed predictions with matching inputs and settings. Keep any custom `--source` and `--config` settings the same. After changing an input structure or prediction protocol, use `--rerun`.
+
+For a run made with the default sequence settings:
+
+```bash
+partiflow validate inference/first --criteria af2_ig_peptide --refilter
+partiflow validate inference/first --criteria af2_ig_peptide --recompute-metrics
+```
+
+`--refilter` reapplies criteria to saved metrics. `--recompute-metrics` recalculates metrics from saved predictions and confidence arrays. Neither runs AF2 or MPNN, and missing predictions remain incomplete. `--plan`, `--refilter`, and `--recompute-metrics` are mutually exclusive. Do not combine `--rerun` with either saved-result update mode.
+
+Use a criterion during validation or refiltering before [clustering](cluster.md) an AF2 passing cohort.

@@ -13,6 +13,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from partiflow.paths import model_root
+from partiflow.ui import DownloadDisplay, show_inventory, terminal_output
 
 MPNN_URL = "https://raw.githubusercontent.com/dauparas/ProteinMPNN/8907e6671bfbfc92303b5f79c4b5e6ce47cdef57"
 AF2_URL = "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar"
@@ -70,15 +71,36 @@ def data_root(root, *, data_dir=None, config=None):
     if data_dir:
         return Path(data_dir).expanduser().resolve()
     if config:
-        import yaml
+        from partiflow.training import config as training_config
 
-        value = yaml.safe_load(Path(config).read_text()) or {}
+        path = Path(config).expanduser().resolve()
+        value = training_config.load_config(path, model_directory=root)
         selected = value.get("data_dir")
-        if not selected:
-            processed = value.get("datamodule", {}).get("processed_dir")
-            selected = Path(processed).parent if processed else None
         if selected:
-            return Path(selected).expanduser().resolve()
+            selected = Path(selected).expanduser()
+            if not selected.is_absolute():
+                base = (
+                    training_config.default_work_root()
+                    if path.is_relative_to(training_config.config_dir().resolve())
+                    else path.parent
+                )
+                selected = base / selected
+            return selected.resolve()
+        dataset = value.get("dataset") or {}
+        datamodule = dataset.get("datamodule") or value.get("datamodule") or {}
+        processed = datamodule.get("processed_dir")
+        if processed:
+            processed = Path(processed)
+            selected = processed.parent.resolve()
+            split = datamodule.get("split_csv")
+            if processed.name != "processed" or (
+                split and Path(split).parent.resolve() != selected / "indexes"
+            ):
+                raise ValueError(
+                    "PepInter resource commands require indexes/ and processed/ in one data root; "
+                    "use --data-dir to select a standard-layout destination"
+                )
+            return selected
     return Path(root) / "train_data" / "pepinter"
 
 
@@ -369,6 +391,8 @@ def run(args):
         raise ValueError(f"Unknown download targets: {sorted(unknown)}")
     root = model_root(getattr(args, "model_dir", None))
     if getattr(args, "list", False):
+        interactive = terminal_output()
+        records = []
         for name in targets or TARGETS:
             status = resource_status(
                 name,
@@ -377,30 +401,40 @@ def run(args):
                 config=getattr(args, "config", None),
             )
             status["url_configured"] = name in {"af2", "proteinmpnn", "solublempnn"}
-            print(json.dumps(status))
+            if interactive:
+                records.append(status)
+            else:
+                print(json.dumps(status))
+        if interactive:
+            show_inventory(records, root)
         return 0
     if not targets:
         raise ValueError("Provide download targets, --all, or --list")
     if getattr(args, "url", None) and len(targets) != 1:
         raise ValueError("--url requires exactly one target")
     failed = False
-    for target in dict.fromkeys(targets):
-        try:
-            result = acquire(
-                target,
-                root,
-                from_local=getattr(args, "from_local", None),
-                url=getattr(args, "url", None),
-                force=getattr(args, "force", False),
-                data_dir=getattr(args, "data_dir", None),
-                config=getattr(args, "config", None),
-            )
-        except (OSError, ValueError, tarfile.TarError, zipfile.BadZipFile) as exc:
-            result = {
-                "target": target,
-                "status": "failed",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-        print(json.dumps(result))
-        failed |= result["status"] in {"failed", "unconfigured"}
+    targets = list(dict.fromkeys(targets))
+    with DownloadDisplay(root, targets) as display:
+        for target in targets:
+            display.begin(target)
+            try:
+                result = acquire(
+                    target,
+                    root,
+                    from_local=getattr(args, "from_local", None),
+                    url=getattr(args, "url", None),
+                    force=getattr(args, "force", False),
+                    data_dir=getattr(args, "data_dir", None),
+                    config=getattr(args, "config", None),
+                )
+            except (OSError, ValueError, tarfile.TarError, zipfile.BadZipFile) as exc:
+                result = {
+                    "target": target,
+                    "status": "failed",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            display.complete(result)
+            if not display.active:
+                print(json.dumps(result))
+            failed |= result["status"] in {"failed", "unconfigured"}
     return int(failed)

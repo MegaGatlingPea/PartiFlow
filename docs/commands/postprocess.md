@@ -1,154 +1,62 @@
-# Postprocessing
+# Relax structures and apply quality rules
 
-`partiflow postprocess` relaxes saved structures and optionally applies the
-quality rules in a preset. It uses the original PartiFlow task and topology
-metadata and keeps quality metrics separate from design reward values.
+`postprocess` relaxes saved structures and can evaluate interface quality. For design inputs, it updates the published PDBs and their result-table identities; reports go under each task's `postprocess/` directory.
 
 ```bash
-partiflow postprocess inference/klk2 --plan
-partiflow postprocess inference/klk2 --filter false --platform CPU
-partiflow postprocess inference/klk2 --filter true --criteria rosetta_bindcraft_peptide
+partiflow postprocess inference/first --plan
+partiflow postprocess inference/first --filter false --platform CPU
+partiflow postprocess inference/first --filter true --criteria rosetta_bindcraft_peptide
 ```
 
-## Inputs and execution settings
+Inputs include run/task directories, `result.csv` files, explicit PDB files, and explicit `AF2success` directories. Repeat `--task` and `--criteria` for selections. `--config FILE` overlays the [postprocessing configuration](../../configs/postprocess.yaml); `--presets FILE` supplies quality rules. `--plan` lists the work without relaxing or scoring structures.
 
-Inputs are one or more run/task paths, `result.csv` files, explicit PDB files,
-or an explicit `AF2success` directory. The default processes published design
-structures. `--filter` accepts exactly `true` or `false` and defaults to false.
-The other options are `--config`, repeatable `--task` and `--criteria`,
-`--presets`, `--rerun`, `--plan`, `--platform CPU|CUDA|OpenCL`, and `--model-dir`.
-`--plan` prepares the selected work without running relaxation or scoring.
+## Relaxation and chemistry
 
-Defaults come from [configs/postprocess.yaml](../../configs/postprocess.yaml).
-One command shares a pool of persistent Ray workers across its selected tasks.
-Each worker handles a sample through relaxation, required metrics, preset
-decisions, and publication before accepting another compatible sample.
-An idle worker immediately takes the next compatible sample; tasks can compute
-concurrently even though each task retains its own result table.
+The standalone command defaults to `method: auto`, CPU, linear relaxation enabled, and filtering disabled. Standard Rosetta relaxation uses `beta_nov16`, one FastRelax repeat, and up to 200 minimizer iterations. Backbone and side chains can move globally, rigid-body jumps stay fixed, and the default adds no coordinate or motif restraints.
 
-Use a small YAML overlay to control CPU resources:
+Head-to-tail and disulfide tasks retain their declared chemical bonds during relaxation. Final geometry and PDB connection records follow the restored chemistry. Relaxation-only penalties are removed before quality scoring.
+
+Registered nonstandard residues and broader covalent connections use OpenMM. An explicit backend choice must support the input chemistry. In `auto` mode, Rosetta runtime failures can fall back to OpenMM. See [topology](../topology.md) for bond declarations and supported routes.
+
+For supported nonstandard residues, native Rosetta energy scoring uses mapped residue types at fixed coordinates, without Rosetta relaxation, minimization, or packing. The [support matrix](../../partiflow/postprocess/rosetta_ncaa/support_matrix.csv) lists the 45 supported energy-scoring types. BAL uses B3G beta-backbone chemistry and currently lacks `surface_hydrophobicity`; its other supported metrics remain available.
+
+Task-level postprocessing during design has a separate default: ordinary linear tasks skip relaxation unless requested. Special topology and registered nonstandard chemistry still require restoration. Standalone postprocessing lets you relax published candidates later.
+
+## Optional filtering
+
+`--filter false` requests relaxation without quality metrics. `--filter true` calculates the metrics needed by the selected criteria. The default criterion is `rosetta_bindcraft_peptide`, with shape complementarity, interface hydrogen bonds, interface unsatisfied hydrogen bonds, and surface hydrophobicity rules. See the [preset guide](../presets.md#rosetta-interface-criteria) for exact operators and thresholds.
+
+A failed threshold retains the relaxed structure and measured values. A missing required metric is `unavailable`, and a monomer receives `not_applicable` for an interface preset. BAL cannot pass the default four-rule preset while its surface metric is unavailable.
+
+## Runtime settings
+
+Use `--platform CPU|CUDA|OpenCL` to select the OpenMM platform. Rosetta calculations run on CPU. A YAML overlay can set CPU concurrency:
 
 ```yaml
-# postprocess-local.yaml
 workers: 8
 threads: 1
 seed: 2026
 timeout: 1800
 ```
 
-```bash
-partiflow postprocess inference/klk2 --config postprocess-local.yaml --filter true
-```
-
-`workers: null` automatically chooses an upper bound from the selected work and
-allocated CPU resources, including affinity and job allocation. An explicit
-worker count is a concurrency cap. `threads: 1` is the default per-worker CPU
-budget. `timeout: 1800` bounds worker startup and individual sample calls in
-seconds. Workers reset their Rosetta random stream before each sample using
-`seed`; the metric phase has its own reset. Standard Rosetta work runs on CPU.
-GPU-requested OpenMM work also observes available GPU resources.
-
-## Relaxation and chemical support
-
-The default standard-peptide Rosetta protocol uses `beta_nov16`, global
-backbone and side-chain mobility, fixed rigid-body jumps, and repacking without
-sequence changes. FastRelax uses one repeat and at most 200 minimizer
-iterations. It adds no coordinate or motif restraints. Existing configuration
-overrides for mobility and iteration count remain available.
-
-PartiFlow's disulfide and head-to-tail logic remains part of the calculation:
-topology is constructed, real chemical connections and required relaxation
-penalties are retained, final geometry is checked, and the corresponding PDB
-connection records are written. Relaxation-only penalties are removed before
-quality scoring.
-
-Registered nonstandard residues and broader covalent connections continue
-through OpenMM. Explicit backend requests are strict. In `auto` mode, a
-Rosetta runtime failure can fall back to OpenMM. OpenMM retains its force fields
-and harmonic restraints, and its CPU thread setting follows `threads`.
-
-Standard `beta_nov16` work and native NCAA `ref2015` scoring use separate SDK
-profiles in separate worker processes. A process keeps its profile for its
-lifetime, keeping standard beta correction settings separate from native NCAA
-chemistry. Each worker initializes its required SDK at most once.
-Unfiltered OpenMM work in the `native_ref2015` profile does not initialize the
-native scoring SDK.
-
-NCAA scoring uses exact mapped residue types at fixed coordinates, with
-Rosetta relaxation, minimization, and packing disabled for those types. The
-[native support matrix](../../partiflow/postprocess/rosetta_ncaa/support_matrix.csv)
-contains 45 supported energy-scoring types. BAL maps to Rosetta B3G. In the
-current LayerSelector implementation, its beta backbone leaves
-`surface_hydrophobicity` unavailable; other supported metrics and native energy
-scoring remain available.
-
-## Optional filtering
-
-`--filter false` performs relaxation without requesting quality metrics.
-`--filter true` calculates only the metrics required by the selected presets
-and their calculation dependencies. A standard Rosetta sample reuses its
-relaxed Pose for scoring. An OpenMM result is converted to the appropriate
-native scoring Pose once when scoring is needed.
-
-The default `rosetta_bindcraft_peptide` preset keeps PartiFlow's four rules:
-
-- `shape_complementarity`
-- `interface_hbonds`
-- `interface_unsat_hbonds`
-- `surface_hydrophobicity`
-
-Their exact thresholds and operators are maintained in
-[configs/preset.yaml](../../configs/preset.yaml). The standard relaxation
-protocol update does not replace this preset. Extra PackStat, SASA, energy, or
-composition calculations run only when the requested metrics need them.
-Custom criteria belong in a preset YAML selected with `--presets`.
-
-A missing required metric is `unavailable` and cannot pass its preset. BAL
-therefore cannot pass the default four-rule preset while its required surface
-metric is unavailable. Monomers receive `not_applicable` for an interface
-preset. A scientific threshold failure retains the relaxed structure and its
-measured values.
-
-## Outputs, failures, and resume
-
-For design inputs, a completed staged structure atomically replaces its source.
-Its task's `result.csv` refreshes the actual design identity and atom locators;
-reward values and ranks retain their original meaning. Reports and preset
-decisions are written under `TASK/postprocess/`. A relaxation failure retains
-the previous valid input.
-
-An explicit `AF2success` input instead writes separate
-`postprocess/refold/` artifacts and preserves sequence-slot paths in its reports.
-The original refolds, validation reports, and design result table remain intact.
-
-Geometry is published with a small completion record before optional native
-metric calculation. If a native metric calculation crashes its worker, the
-completed geometry remains available and the missing metrics and decisions
-are reported as `unavailable`. Other samples continue. The command does not
-automatically repeat the failed sample in the same invocation.
-
-`result.csv` publication retains a task-level rollback boundary. If publication
-fails, that task's structures, reports, and table are restored. Tasks already
-published successfully remain committed even if a later task fails; the
-computations for different tasks may have overlapped.
+Save it as `postprocess-local.yaml`, then run:
 
 ```bash
-# Reuse compatible completed geometry and fill missing work.
-partiflow postprocess inference/klk2 --filter false
-# Add metrics without relaxing completed samples again.
-partiflow postprocess inference/klk2 --filter true
-# Explicitly repeat relaxation after an input or protocol change.
-partiflow postprocess inference/klk2 --filter true --rerun
+partiflow postprocess inference/first --config postprocess-local.yaml --filter true
 ```
 
-Version 2 records store effective settings, identity metadata, output locations,
-metrics, and decisions. They do not store copies of every input/output atom or
-coordinate. Resume compares the saved settings and metadata and checks that
-the published output exists. Keep inputs fixed during a command. After an
-external edit to a structure at the same path, use `--rerun`; lightweight
-records do not automatically detect same-path coordinate changes.
+The default `workers: null` chooses a cap from the selected work and available CPU allocation. `threads: 1` is the per-worker CPU budget. `timeout: 1800` bounds startup and individual sample calls in seconds.
 
-A later filtered invocation can reuse successful relaxation. Threshold-only
-preset changes rejudge stored metrics without repeating relaxation. Earlier
-report layouts require explicit `--rerun`; the command does not migrate them
-or remove unselected outputs.
+## Results and reruns
+
+`TASK/postprocess/summary.json` and sample reports record relaxation, metrics, and criterion decisions. Design `result.csv` keeps its reward values and ranks while updating `postprocess_status`, final identities, and atom locators. A relaxation failure leaves the previous valid structure available.
+
+Explicit PDB/refold inputs instead write separate structures under `postprocess/refold/` and keep the originals. If a metric calculation fails after relaxation, completed geometry may remain available while its missing metrics are marked `unavailable`.
+
+```bash
+partiflow postprocess inference/first --filter false
+partiflow postprocess inference/first --filter true
+partiflow postprocess inference/first --filter true --rerun
+```
+
+The first two commands can reuse compatible completed relaxation and add missing metrics. Threshold-only preset changes reevaluate stored metrics. Use `--rerun` after editing a structure at the same path, changing the relaxation protocol, or opening results from an older incompatible report format. Keep structures fixed while a command is running.

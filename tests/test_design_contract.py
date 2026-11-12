@@ -24,8 +24,8 @@ from partiflow.design.runtime import _prepare, _publish
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW = ROOT / "inference" / "acceptance_raw_1" / "raw" / "sample1.pdb"
-MATRIX = ROOT / "inference" / "acceptance_matrix_raw_1"
+RAW = Path(os.environ.get("PARTIFLOW_ACCEPTANCE_RAW", ROOT / "inference" / "acceptance_raw_1" / "raw" / "sample1.pdb"))
+MATRIX = Path(os.environ.get("PARTIFLOW_ACCEPTANCE_MATRIX", ROOT / "inference" / "acceptance_matrix_raw_1"))
 REFERENCE = ROOT / "pdbs" / "design" / "mdm2" / "mdm2_motif.pdb"
 PUBLIC_BASE = (
     "filename",
@@ -520,6 +520,8 @@ class DesignPublicationContractTests(unittest.TestCase):
         self,
     ):
         cfg, root, requests, tasks = self.prepare({"fixed": 1}, reward=True)
+        fixed_type = next(atom["restype"] for atom in atoms(RAW)
+                          if atom["chain"] == "L" and atom["res_id"] == 1 and atom["atom"] == "CA")
         item = self.candidate(
             root,
             "fixed",
@@ -528,7 +530,7 @@ class DesignPublicationContractTests(unittest.TestCase):
             enabled=True,
             metadata={"fixed_positions": [1]},
             topology=[
-                {"type": "residue_template", "resid": 1, "resname": "GLU"},
+                {"type": "residue_template", "resid": 1, "resname": fixed_type},
                 {"type": "head_to_tail", "anchors": [1, 3]},
             ],
         )
@@ -585,7 +587,7 @@ class DesignPublicationContractTests(unittest.TestCase):
         self.assertEqual(row["af2_plddt"], "82.0")
         self.assertEqual(
             json.loads(row["fixed_restypes"]),
-            [{"chain": "L", "res_id": 1, "restype": "GLU"}],
+            [{"chain": "L", "res_id": 1, "restype": fixed_type}],
         )
         final = root / "fixed" / row["filename"]
         final_atoms = atoms(final)
@@ -649,6 +651,8 @@ class DesignPublicationContractTests(unittest.TestCase):
             root, "failure", 1, 0, enabled=True, metadata={"fixed_positions": [1]}
         )
         original = item.pdb_path.read_bytes()
+        fixed_type = next(atom["restype"] for atom in atoms(item.pdb_path)
+                          if atom["chain"] == "L" and atom["res_id"] == 1 and atom["atom"] == "CA")
 
         def fail(work, output, **options):
             output.write_text("partial staged output")
@@ -666,7 +670,7 @@ class DesignPublicationContractTests(unittest.TestCase):
         self.assertEqual((root / "failure" / row["filename"]).read_bytes(), original)
         self.assertEqual(
             json.loads(row["fixed_restypes"]),
-            [{"chain": "L", "res_id": 1, "restype": "GLU"}],
+            [{"chain": "L", "res_id": 1, "restype": fixed_type}],
         )
         self.assertFalse(list((root / "failure").rglob(".postprocess-*")))
 

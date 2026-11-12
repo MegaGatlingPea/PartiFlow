@@ -1,10 +1,12 @@
-# Side-chain packing
+# Pack peptide side chains
 
-Packing fixes the binder sequence and CA coordinates and generates its all-atom side-chain coordinates.
+Packing preserves the reference peptide's sequence, conditions on its CA geometry, and predicts side-chain coordinates. The final coordinates pass through the VAE decoder.
 
 ```bash
 partiflow design configs/tasks/example.yaml --task klk2_packing \
-  --ckpt ckpts/partiflow-aux.ckpt --out inference/packing
+  --ckpt ./ckpts/partiflow-aux.ckpt --out inference/packing
 ```
 
-Set `task_type: packing`, `is_complex: true`, and the reference `pep_chain`. Both binder identity and backbone conditioning come from the reference structure. Model-based packing and optional topology-aware relaxation are separate stages with separate coordinate constraints. See [task schema](../task_schema.md) and [postprocessing](../commands/postprocess.md).
+Use `task_type: packing`, `is_complex: true`, and the reference `pep_chain`. The auxiliary checkpoint supports this task. Both sequence identity and backbone conditioning come from the reference complex.
+
+Packing and subsequent relaxation are separate operations. Declare any required chemical connections in the task's [topology](../topology.md), then use [postprocessing](../commands/postprocess.md) for relaxation and optional quality criteria.

@@ -1,0 +1,59 @@
+# Fine scaffold conditioning uses the explicitly selected SS checkpoint:
+# partiflow design configs/tasks/scaffold.yaml --task klk2_scaffold_linear \
+#   --ckpt ./ckpts/partiflow-ss.ckpt --out inference/scaffold_linear
+# Select one task at a time to run the amide or terminal-disulfide example.
+# Secondary-structure tokens are geometry conditions, not fixed sequences.
+
+klk2_scaffold_linear:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2.pdb
+  is_complex: false
+  pep_chain: L
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: {nres: [12], min_len: null, max_len: null, step_len: null}
+  sample_num: 1
+  binder_topology:
+    mode: sample
+    lib_path: configs/scaffolds/linpep_archetype_scaffold_lib.pt
+    category: linear_peptide
+    preset: beta_hairpin
+    systematic: true
+  omit_aa: [CYS]
+
+klk2_scaffold_amide_cycle:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2.pdb
+  is_complex: false
+  pep_chain: L
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: {nres: [12], min_len: null, max_len: null, step_len: null}
+  sample_num: 1
+  binder_topology:
+    mode: sample
+    lib_path: configs/scaffolds/cycpep_archetype_scaffold_lib.pt
+    category: head_tail_amide_cyclic_peptide
+    preset: beta_hairpin
+    systematic: true
+  omit_aa: [CYS]
+
+klk2_scaffold_terminal_disulfide:
+  task_type: denovo
+  pdb_path: ./pdbs/design/klk2/klk2.pdb
+  is_complex: false
+  pep_chain: L
+  hotspots: null
+  motif_cfg: null
+  lens_cfg: {nres: [12], min_len: null, max_len: null, step_len: null}
+  sample_num: 1
+  binder_topology:
+    mode: sample
+    lib_path: configs/scaffolds/head_tail_disulfied_cyclic_archetype_scaffold_lib.pt
+    category: head_tail_disulfied_cyclic_peptide
+    preset: beta_hairpin
+    systematic: true
+  # This library fixes terminal CYS identities and an SG-SG disulfide.
+  # It does not add an N-C amide head-to-tail bond.
+  omit_aa: [CYS]
+

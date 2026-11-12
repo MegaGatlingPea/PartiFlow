@@ -1,15 +1,46 @@
-# Explicit topology and nonstandard residues
+# Chemical topology and nonstandard residues
 
-Topology declares chemical connections; residue names alone do not create inter-residue bonds. Keep fixed identities, CA-distance conditions, topology type, and anchors consistent. Task anchor positions refer to generated binder positions; source hotspot selectors retain source PDB numbering.
+Use `topology` to declare chemical connections in the generated peptide. Constraint distances guide geometry, residue constraints fix identities, and topology entries specify the bonds to restore.
+
+For a head-to-tail amide ring:
 
 ```yaml
 topology:
   - {type: head_tail, begin_resid: 1, end_resid: last}
+postprocess: {enabled: true, method: auto}
+```
+
+For a disulfide at positions 3 and 7:
+
+```yaml
+constraint:
+  restype:
+    - {resid: 3, aa: C}
+    - {resid: 7, aa: C}
+  spatial:
+    - {begin_resid: 3, end_resid: 7, distance: 5.5}
+topology:
   - {type: disulfide, begin_resid: 3, end_resid: 7}
 postprocess: {enabled: true, method: auto}
 ```
 
-Supported declarations include head-to-tail closure, disulfide, isopeptide/stapled connections, three-anchor bicycle chemistry, registered RTY connections, and MK8/NLE hydrocarbon staples. `head_tail` and `head_to_tail` identify the same closure. `mk8_staple` and `nle_staple` retain their executable registry names. Passive residue replacement uses `residue_template` with a position and registered `resname`.
+These positions refer to the generated binder, starting at one. Source hotspot and motif selectors instead use the input PDB numbering. A terminal cysteine disulfide joins SG atoms and is distinct from an N–C head-to-tail amide bond; the [scaffold guide](scaffolds.md) includes both kinds of examples.
+
+## Connection types
+
+| Task declaration | Connection |
+| --- | --- |
+| `head_tail` or `head_to_tail` | Head-to-tail amide closure |
+| `disulfide` | Cysteine SG–SG bond |
+| `isopep` | Supported side-chain amide connection |
+| `bicyclic` | Supported three-anchor bicycle chemistry |
+| `mk8_staple` | Registered MK8 hydrocarbon staple |
+| `nle_staple` | Registered NLE hydrocarbon staple |
+| `residue_template` | Registered residue replacement |
+
+Registered RTY connections are also supported. The [example tasks](../configs/tasks/example.yaml) and [CPSet docking tasks](../configs/tasks/cpset.yaml) show full declarations with the required identities and anchors. When changing a task, keep its chemical residue types, anchors, and distance conditions consistent.
+
+For example, a pair of MK8 residues needs both identities and its bond declaration:
 
 ```yaml
 constraint:
@@ -20,8 +51,14 @@ topology:
   - {type: mk8_staple, anchors: [3, 7]}
 ```
 
-The production OpenMM path applies the declared graph, registered templates, atom/charge assignments, and geometric checks. Rosetta supports applicable standard linear, head-to-tail, and disulfide relaxation; broader chemistry remains OpenMM-owned. Backend restraints and local-subset choices retain their existing meanings and permit their configured coordinate movement. Mandatory special chemistry cannot opt out through `postprocess: false` or an incompatible explicit backend.
+An explicit docking sequence can use bracketed registered codes. Naming the residues alone does not create the staple.
 
-All 45 rows in the [native NCAA support matrix](../partiflow/postprocess/rosetta_ncaa/support_matrix.csv) support fixed-coordinate energy scoring and declare no Rosetta relaxation/packing support. Strict loading retains project aliases and native patches, checks real atom identities and source graphs/charges, restores declared connections, and compares coordinates directly. These scoring rules do not replace the production chemistry-restoration route.
+## Relaxation and assessment
 
-Native interface metrics are calculated without NCAA packing. BAL uses native B3G beta-backbone chemistry and lacks only `surface_hydrophobicity` among the four canonical filter metrics; shape complementarity, interface hydrogen bonds, and interface unsatisfied hydrogen bonds remain available. The default interface preset requires the missing metric and therefore reports `unavailable` for that case. See [postprocessing](commands/postprocess.md) for metric and criterion behavior. Scoring computability does not establish physical quality, and AF2 validation does not silently convert this chemistry to a standard residue.
+Rosetta supports applicable standard linear, head-to-tail, and disulfide relaxation. Broader covalent chemistry and registered nonstandard residues use OpenMM. Special chemistry requires restoration during design, so it cannot explicitly disable postprocessing or force an incompatible backend.
+
+The final structures retain the declared atom identities and connections. Relaxation can move coordinates according to the selected backend and restraints. Use the final PDB and its updated result-table identity fields when examining a candidate.
+
+The [native NCAA matrix](../partiflow/postprocess/rosetta_ncaa/support_matrix.csv) lists 45 fixed-coordinate energy-scoring types. It does not provide Rosetta relaxation or packing for those types. BAL uses B3G beta-backbone chemistry; its missing `surface_hydrophobicity` metric prevents passing the default four-rule interface preset. Other supported metrics can still be reported.
+
+AF2 accepts representable standard protein chemistry. Unsupported nonstandard residues, ligands, atoms, or bonds are reported explicitly; they are not replaced by canonical residues. Use [postprocessing](commands/postprocess.md) and an appropriate [quality preset](presets.md) for supported chemical assessment.

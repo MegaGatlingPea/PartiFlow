@@ -3203,6 +3203,17 @@ def validate_task_postprocess_config(
             str(binder_topology.get("mode", "") or "").strip().lower()
         )
         if binder_topology_mode in {"sample", "sample_lib", "library", "topology_lib"}:
+            if (
+                str(task.get("task_type", "")).strip().lower() == "denovo"
+                and isinstance(task.get("lens_cfg", None), Mapping)
+            ):
+                # Match runtime expansion once per length, regardless of sample count.
+                # Unreachable library entries must not add chemistry to this task.
+                reachable_lengths = parse_nlens_cfg({**task, "sample_num": 1})
+                if reachable_lengths is not None:
+                    sampled_topology_total_len = {
+                        int(length) for length in reachable_lengths
+                    }
             lib_path, sampled_candidates = _sampled_topology_candidates(
                 task,
                 binder_topology,

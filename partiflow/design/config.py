@@ -190,6 +190,16 @@ def load(args):
                     if OmegaConf.is_config(cfg[field])
                     else cfg[field]
                 )
+        topology = task.get("binder_topology")
+        if isinstance(topology, dict):
+            for key in ("lib_path", "path", "library_path", "ss_path", "adj_path",
+                        "scaffold_dir", "scaffold_list"):
+                value = topology.get(key)
+                if not isinstance(value, (str, Path)):
+                    continue
+                path = Path(value).expanduser()
+                topology[key] = str((resource_root() / path if bundled and not path.is_absolute()
+                                     else input_path(path)).resolve())
     assets = model_root(getattr(args, "model_dir", None))
     with open_dict(cfg):
         cfg.tasks = tasks

@@ -1,6 +1,8 @@
-# Best-of-N search and AF2 reward
+# Raw sampling and Best-of-N reward
 
-Raw sampling uses `search.algorithm: null` and no reward. Optional `best_of_n` expands each planned input into the configured number of complete-trajectory replicas. The search and reward configurations compose through the same design command.
+Raw sampling is the default: `search.algorithm: null` and no reward. It generates the candidates requested by the task's length and sample plan.
+
+Best-of-N runs several full generation trajectories for each planned sample and ranks the evaluated candidates with AF2 reward:
 
 ```bash
 partiflow design configs/tasks/example.yaml --task klk2_hotspot \
@@ -8,10 +10,22 @@ partiflow design configs/tasks/example.yaml --task klk2_hotspot \
   --override search.best_of_n.replicas=4 --out inference/klk2_best_of_n
 ```
 
-`search.best_of_n.replicas` is a positive integer and `search.selection_scope` is `task_length_plan`. Base sample identities span the task's expanded length plan. Successfully evaluated replicas are retained and ranked within each task and actual binder length; rank 1 has the highest available reward in that group. This does not automatically select a validation-passing candidate or reduce publication to one structure per base. See [design outputs](commands/design.md) for filenames and the ordered CSV contract.
+`search.best_of_n.replicas` is a positive integer. The shipped Best-of-N configuration defaults to one replica, so set it to the number you want. Four replicas on the bundled task's ten requested lengths plan 40 trajectories.
 
-[configs/reward/af2.yaml](../configs/reward/af2.yaml) defaults to the generated sequence (`sequence.source: design`) and a Multimer v3 initial-guess prediction with no MSA search. Its default score is `0.25 * (design_plddt / 100) + 0.75 * interface_iptm`. `structure_source: fold` publishes the folded candidate before task postprocessing; `structure_source: design` retains the design coordinates and rejects a changed sequence on unchanged side chains.
+Successfully evaluated candidates are retained and ranked within each task and actual peptide length. Rank 1 has the highest available reward in that group. The output is not reduced to a single winner per base sample. Filenames use `sample<base>_<chain>_rank<rank>.pdb`; `result.csv` records base identities, ranks, measured reward values, and failures.
 
-The shared sequence policy can retain the generated sequence or use ProteinMPNN/SolubleMPNN while preserving fixed identities. AF2 reward supports standard protein chemistry and reports unsupported chemistry explicitly; it does not substitute canonical identities for nonstandard residues. Reward calculation precedes task relaxation, so its numeric CSV columns retain the pre-relaxation values. Missing values remain blank and actual metric names are sorted before the two trailing CSV fields.
+## AF2 reward settings
 
-Reward ranking and later quality criteria are separate operations. Standalone [validation](commands/validate.md) performs the paired complex/monomer protocol and evaluates named criteria; its default sequence sources differ from the reward defaults. Model weights are provisioned through [local resources](resources.md), with no runtime downloads.
+The [default reward](../configs/reward/af2.yaml) uses the generated sequence and an AF2 Multimer v3 prediction with initial guess, model 1, three recycles, and no MSA search. It combines:
+
+```text
+reward = 0.25 × (design_plddt / 100) + 0.75 × interface_iptm
+```
+
+`structure_source: fold` publishes the reward-predicted structure before task postprocessing. `structure_source: design` keeps the design coordinates and requires its sequence to remain compatible with those side chains. The shared sequence policy can retain the generated sequence or use ProteinMPNN/SolubleMPNN while respecting fixed identities.
+
+Prepare the AF2 parameters before running reward. Import MPNN weights as well if the selected sequence policy uses them; see [resources](resources.md).
+
+Reward is calculated before task relaxation, so its stored metrics keep that meaning after relaxation. Later [paired AF2 validation](commands/validate.md) uses a different protocol and can apply [quality presets](presets.md). A reward rank by itself does not imply that a candidate passed those criteria.
+
+AF2 reward supports representable standard protein chemistry. Unsupported residues, atoms, ligands, or bonds are reported explicitly rather than converted to canonical identities.
