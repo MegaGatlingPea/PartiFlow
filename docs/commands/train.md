@@ -1,5 +1,13 @@
 # Train the VAE or flow-matching model
 
+Download the prepared PepInter example subset first:
+
+```bash
+partiflow download pepinter
+```
+
+The download includes 64 training and 16 validation structures, their processed graphs, and the split index. Both supplied training configurations use `train_data/pepinter_subset/`; no graph preprocessing is needed. These sorted-ID examples are intended to run the training workflow, not to reproduce the published models' full training. The full training dataset is not included.
+
 Choose `vae` or `fm` and provide a training YAML. Inspect the resolved paths and settings before starting:
 
 ```bash

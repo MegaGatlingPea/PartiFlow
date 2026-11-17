@@ -1,7 +1,7 @@
 datamodule:
   _target_: "partiflow.datasets.pdb_data.PepLightningDataModule"
-  split_csv: "./train_data/pepinter/indexes/split.csv"
-  processed_dir: "./train_data/pepinter/processed"
+  split_csv: "./train_data/pepinter_subset/indexes/split.csv"
+  processed_dir: "./train_data/pepinter_subset/processed"
   train_sampler: null
   pep_chain: "L"
   in_memory: False

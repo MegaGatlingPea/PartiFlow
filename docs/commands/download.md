@@ -7,7 +7,7 @@ partiflow download
 partiflow check
 ```
 
-PartiFlow checkpoints and the raw PepInter archive come from [MegaGatlingPea/PartiFlow](https://huggingface.co/MegaGatlingPea/PartiFlow). AF2 and MPNN use the sources listed below.
+PartiFlow checkpoints and the prepared PepInter subset come from [MegaGatlingPea/PartiFlow](https://huggingface.co/MegaGatlingPea/PartiFlow). AF2 and MPNN use the sources listed below.
 
 ## Select targets
 
@@ -17,23 +17,24 @@ partiflow download partiflow-aux partiflow-dock partiflow-ss
 partiflow download af2 proteinmpnn solublempnn
 ```
 
-Targets are `partiflow`, `partiflow-aux`, `partiflow-dock`, `partiflow-ss`, `autoencoder`, `af2`, `proteinmpnn`, `solublempnn`, and `pepinter`. Every target has a default source. `--list` is read-only; `--all` downloads all nine targets, including the PepInter archive.
+Targets are `partiflow`, `partiflow-aux`, `partiflow-dock`, `partiflow-ss`, `autoencoder`, `af2`, `proteinmpnn`, `solublempnn`, and `pepinter`. Every target has a default source. `--list` is read-only; `--all` downloads all nine targets, including the prepared PepInter subset.
 
 With no targets, a terminal opens the resource selector with those four weights preselected; noninteractive use downloads the four directly. Explicit target names replace the default set. `partiflow-dock` remains optional. Use Up/Down to browse, Space to select, and Enter to download. Tab moves to the Download and Back buttons. Esc or Ctrl-D returns without downloading; Ctrl-C exits with status 130. An empty selection stays in the selector.
 
-The presence tick is separate from the selection checkbox. Existing complete downloads are skipped unless `--force` is supplied. With redirected input/output or `TERM=dumb`, provide target names, `--all`, or `--list` explicitly. `NO_COLOR` uses a monochrome selector and plain reports.
+The presence tick is separate from the selection checkbox. Existing complete downloads are skipped unless `--force` is supplied. With redirected input/output or `TERM=dumb`, the bare command downloads the four default weights directly. Use target names, `--all`, or `--list` for another selection. `NO_COLOR` uses a monochrome selector and plain reports.
 
-## Download PepInter
+## Download the PepInter subset
 
 ```bash
-partiflow download pepinter --data-dir train_data/pepinter
-python -m partiflow.training.prepare_data \
-  --archive train_data/pepinter/pepinter.tar.xz --root train_data/pepinter
+partiflow download pepinter
+partiflow check --data-dir train_data/pepinter_subset
 ```
 
-The download command saves `DATA_DIR/pepinter.tar.xz`. It does not extract the archive or build training graphs. Preprocessing is a separate step and covers all 171,019 source structures by default. It preserves the train, validation, and test splits, mapping `valid` to `val`. See [training data](../resources.md#prepare-training-data) before starting a training run.
+This target downloads and unpacks `pepinter-subset.tar.xz`. The default destination is `train_data/pepinter_subset/`, containing 64 training and 16 validation PDB structures, their processed graphs, and `indexes/split.csv`. The archive is retained as `DATA_DIR/pepinter-subset.tar.xz`. No graph preprocessing step is needed for this download.
 
-`--data-dir` selects the dataset root. Alternatively, `--config` composes a training YAML, including its Hydra defaults, and resolves the destination using the training path rules. Explicit `--data-dir` takes precedence. A downloaded archive does not satisfy the split-index and processed-graph checks used by `partiflow check`.
+The samples retain their original train/validation assignments and were selected by sorted ID for examples. They do not include a test set. The full training dataset is not included, and training on this subset does not reproduce the published models.
+
+`--data-dir` selects another dataset root. Alternatively, `--config` composes a training YAML, including Hydra defaults, and resolves the destination using the training path rules. Explicit `--data-dir` takes precedence. If you change the destination, point the training configuration at its `indexes/split.csv` and `processed/` directories. See [training data](../resources.md#prepare-training-data) for the layout.
 
 ## Sources and destinations
 

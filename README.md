@@ -23,7 +23,7 @@ partiflow check
 
 The default set contains `autoencoder`, `partiflow`, `partiflow-ss`, and `partiflow-aux`. In a terminal, these four are preselected; press Enter to download them. `partiflow-dock` is an optional specialist.
 
-The [installation and resource guide](docs/resources.md) covers the other checkpoints, AF2/MPNN weights, PepInter data, and installation from a wheel.
+The [installation and resource guide](docs/resources.md) covers the other checkpoints, AF2/MPNN weights, the prepared PepInter subset, and installation from a wheel. For training examples, `partiflow download pepinter` prepares 64 training and 16 validation samples. The full training dataset is not included; this subset does not reproduce the published training results.
 
 ## Make a first design
 

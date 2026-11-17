@@ -20,7 +20,7 @@ RESOURCE_USAGE = {
     "af2": "AF2 structure prediction, validation and reward",
     "proteinmpnn": "ProteinMPNN sequence design",
     "solublempnn": "SolubleMPNN sequence design",
-    "pepinter": "Original PepInter structures; preprocess before training",
+    "pepinter": "Prepared PepInter example subset: 64 train and 16 val samples",
 }
 _STATUS_STYLES = {
     "present": "green", "complete": "green", "loaded": "green",
@@ -349,8 +349,10 @@ def _asset_groups(console, records, root, *, listing=False):
         rows = []
         for item in selected:
             detail = _resource_detail(item, root)
-            if item["target"] == "pepinter" and "training_data_ready" in item:
-                detail += "\nRaw archive; preprocess before training"
+            if item["target"] == "pepinter" and item.get("counts"):
+                detail += "\n" + ", ".join(
+                    f"{name}: {count}" for name, count in item["counts"].items() if count
+                )
             if listing:
                 source = item.get("url") or "Use --url to choose a download source"
                 detail += "\n" + source

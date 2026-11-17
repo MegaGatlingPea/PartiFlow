@@ -6,8 +6,8 @@ limit_val_batches: 100
 num_sanity_val_steps: 0
 data_preparation:
   enabled: false
-  root: ./train_data/pepinter
-  archive: ./train_data/pepinter/pepinter.tar.xz
+  root: ./train_data/pepinter_subset
+  archive: ./train_data/pepinter_subset/pepinter-subset.tar.xz
   subset: false
   extract: false
 

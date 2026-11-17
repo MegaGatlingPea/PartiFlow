@@ -20,7 +20,8 @@ MPNN_URL = "https://raw.githubusercontent.com/dauparas/ProteinMPNN/8907e6671bfbf
 AF2_URL = "https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar"
 HF_REPO = "MegaGatlingPea/PartiFlow"
 HF_BASE = f"https://huggingface.co/{HF_REPO}/resolve/main"
-PEPINTER_URL = f"{HF_BASE}/data/pepinter.tar.xz"
+PEPINTER_ARCHIVE = "pepinter-subset.tar.xz"
+PEPINTER_URL = f"{HF_BASE}/data/{PEPINTER_ARCHIVE}"
 DEFAULT_TARGETS = ("autoencoder", "partiflow", "partiflow-ss", "partiflow-aux")
 
 
@@ -95,7 +96,27 @@ def data_root(root, *, data_dir=None, config=None):
                     "use --data-dir to select a standard-layout destination"
                 )
             return selected
-    return Path(root) / "train_data" / "pepinter"
+    return Path(root) / "train_data" / "pepinter_subset"
+
+
+def _pepinter_record(path, *, ready, counts, error=None):
+    archive = Path(path) / PEPINTER_ARCHIVE
+    record = {
+        "target": "pepinter",
+        "status": "present" if ready else "missing",
+        "path": str(path),
+        "archive": str(archive),
+        "archive_present": archive.is_file() and archive.stat().st_size > 0,
+        "checks": {
+            "split_csv": (Path(path) / "indexes" / "split.csv").is_file(),
+            "processed": ready,
+        },
+        "counts": counts,
+        "training_data_ready": ready,
+    }
+    if error:
+        record["error"] = error
+    return record
 
 
 def resource_status(target, root, *, data_dir=None, config=None):
@@ -104,21 +125,18 @@ def resource_status(target, root, *, data_dir=None, config=None):
     root = Path(root)
     if target == "pepinter":
         path = data_root(root, data_dir=data_dir, config=config)
-        checks = {
-            "split_csv": (path / "indexes" / "split.csv").is_file()
-            and (path / "indexes" / "split.csv").stat().st_size > 0,
-            "processed": (path / "processed").is_dir()
-            and any(item.is_file() for item in (path / "processed").rglob("*")),
-        }
-        return {
-            "target": target,
-            "status": "present" if all(checks.values()) else "missing",
-            "path": str(path),
-            "archive": str(path / "pepinter.tar.xz"),
-            "archive_present": (path / "pepinter.tar.xz").is_file()
-            and (path / "pepinter.tar.xz").stat().st_size > 0,
-            "checks": {key: bool(value) for key, value in checks.items()},
-        }
+        from partiflow.training.prepare_data import read_prepared_index
+
+        ready, counts, error = False, {}, None
+        try:
+            _, counts = read_prepared_index(path)
+            ready = True
+        except FileNotFoundError as exc:
+            if (path / "indexes" / "split.csv").exists():
+                error = str(exc)
+        except (OSError, ValueError) as exc:
+            error = str(exc)
+        return _pepinter_record(path, ready=ready, counts=counts, error=error)
     files = [
         {
             "path": str(root / asset.relative),
@@ -299,16 +317,29 @@ def _source_url(target):
 def download_status(target, root, *, data_dir=None, config=None):
     record = resource_status(target, root, data_dir=data_dir, config=config)
     if target == "pepinter":
-        record = {
-            **record, "data_dir": record["path"], "path": record["archive"],
-            "training_data_ready": record["status"] == "present",
-            "status": "present" if record["archive_present"] else "missing",
-        }
-        record["prepare_command"] = [
-            "python", "-m", "partiflow.training.prepare_data",
-            "--archive", record["archive"], "--root", record["data_dir"],
-        ]
+        record["data_dir"] = record["path"]
+        record["status"] = (
+            "present" if record["training_data_ready"] and record["archive_present"] else "missing"
+        )
     return record
+
+
+def _acquire_pepinter(root, *, url=None, force=False, data_dir=None, config=None):
+    from partiflow.training.prepare_data import install_prepared_archive
+
+    destination = data_root(root, data_dir=data_dir, config=config)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".partiflow-download-", dir=destination.parent) as temporary:
+        archive = Path(temporary) / PEPINTER_ARCHIVE
+        _fetch(url or PEPINTER_URL, archive)
+        result = install_prepared_archive(
+            archive, destination, force=force, archive_name=PEPINTER_ARCHIVE
+        )
+    return {
+        **_pepinter_record(destination, ready=True, counts=result["counts"]),
+        "data_dir": str(destination),
+        "status": "downloaded",
+    }
 
 
 def acquire(target, root, *, url=None, force=False, data_dir=None, config=None):
@@ -320,21 +351,20 @@ def acquire(target, root, *, url=None, force=False, data_dir=None, config=None):
     existing = download_status(target, root, data_dir=data_dir, config=config)
     if existing["status"] == "present" and not force:
         return {**existing, "status": "skipped"}
+    if target == "pepinter":
+        return _acquire_pepinter(
+            root, url=url, force=force, data_dir=data_dir, config=config
+        )
     source_url = url or _source_url(target)
     if not source_url:
         raise ValueError(f"No download URL is configured for {target}")
-    destination_root = data_root(root, data_dir=data_dir, config=config) if target == "pepinter" else root
+    destination_root = root
     destination_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".partiflow-download-", dir=destination_root) as temporary:
         stage = Path(temporary)
         source_name = Path(urllib.parse.unquote(urllib.parse.urlsplit(source_url).path)).name or "download.bin"
         source = stage / ("download.tar" if target == "af2" else source_name)
         _fetch(source_url, source)
-        if target == "pepinter":
-            if not tarfile.is_tarfile(source):
-                raise ValueError("PepInter download is not a readable structure archive")
-            _publish_file(source, destination_root / "pepinter.tar.xz")
-            return {**download_status(target, root, data_dir=destination_root), "status": "downloaded"}
         if _is_archive(source) or target == "af2":
             extracted = stage / "extracted"
             extract_archive(source, extracted)
@@ -369,7 +399,7 @@ def _selection_options(args, root):
         if record["status"] == "present" and not getattr(args, "force", False):
             detail += "\nAlready present; existing files will be skipped"
         if name == "pepinter":
-            detail += "\nRaw archive; run data preprocessing before training"
+            detail += "\nPrepared 64 train / 16 val example subset"
         options.append({**record, "selectable": True, "detail": detail})
     return options
 

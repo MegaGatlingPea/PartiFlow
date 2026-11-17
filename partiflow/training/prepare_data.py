@@ -8,10 +8,148 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 import tarfile
+import tempfile
 
 SPLITS = {"train": "train", "valid": "val", "test": "test"}
 EXPECTED_COUNTS = {"train": 166019, "val": 3750, "test": 1250}
 FIELDS = ("pdbid", "split", "tag", "structure_path", "processed_path")
+
+
+def read_prepared_index(root: Path, *, require_files: bool = True) -> tuple[list[dict], dict]:
+    """Read the dataset split and its referenced PDB/graph files without loading graphs."""
+    root = Path(root).resolve()
+    index = root / "indexes" / "split.csv"
+    with index.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None or set(reader.fieldnames) != set(FIELDS):
+            raise ValueError("PepInter split.csv must contain the standard split fields")
+        rows = list(reader)
+    if not rows:
+        raise ValueError("PepInter split.csv is empty")
+    counts = {split: 0 for split in SPLITS.values()}
+    seen = set()
+    for row in rows:
+        identifier, split = row["pdbid"], row["split"]
+        if not identifier or identifier in seen or split not in counts or not row["tag"]:
+            raise ValueError("PepInter split.csv has an invalid or repeated sample")
+        seen.add(identifier)
+        counts[split] += 1
+        directory = "valid" if split == "val" else split
+        expected = {
+            "structure_path": root / "raw" / directory / (identifier + ".pdb"),
+            "processed_path": root / "processed" / split / (identifier + ".pt"),
+        }
+        for field, target in expected.items():
+            value = row[field]
+            if not value or Path(value).is_absolute() or "\\" in value:
+                raise ValueError(f"PepInter {field} must be a dataset-relative path")
+            actual = (index.parent / value).resolve()
+            if not actual.is_relative_to(root) or actual != target.resolve():
+                raise ValueError(f"PepInter {field} does not match sample {identifier}")
+            if require_files and (not actual.is_file() or actual.stat().st_size == 0):
+                raise FileNotFoundError(f"PepInter sample file is missing or empty: {actual}")
+    return rows, counts
+
+
+def _prepared_result(root: Path, counts: dict) -> dict:
+    return {
+        "counts": counts,
+        "split_csv": str(Path(root) / "indexes" / "split.csv"),
+        "prepared": True,
+    }
+
+
+def is_prepared_archive(archive: Path) -> bool:
+    """Identify the layout from early members without scanning a full raw archive."""
+    with tarfile.open(archive, "r|*") as handle:
+        for member in handle:
+            parts = PurePosixPath(member.name).parts
+            if len(parts) < 2 or parts[0] != "pepinter":
+                continue
+            if parts[1] in SPLITS:
+                return False
+            if parts[1] in {"raw", "processed", "indexes"}:
+                return True
+    return False
+
+
+def _copy_atomic(source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix="." + destination.name, suffix=".tmp", dir=destination.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(fd, "wb") as writer, Path(source).open("rb") as reader:
+            shutil.copyfileobj(reader, writer)
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def publish_prepared_dataset(source: Path, destination: Path, *, force: bool = False) -> dict:
+    """Publish validated prepared files, keeping an existing split table until last."""
+    source, destination = Path(source).resolve(), Path(destination).resolve()
+    rows, counts = read_prepared_index(source)
+    old_index = destination / "indexes" / "split.csv"
+    if old_index.exists() and not force:
+        try:
+            previous, _ = read_prepared_index(destination, require_files=False)
+        except (OSError, ValueError) as exc:
+            raise ValueError(
+                "The existing PepInter index cannot be reused; select a new --data-dir or use --force"
+            ) from exc
+        if {row["pdbid"]: row for row in previous} != {row["pdbid"]: row for row in rows}:
+            raise ValueError(
+                "The existing PepInter index differs from this dataset; select a new --data-dir or use --force"
+            )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if not destination.exists():
+        source.replace(destination)
+        return _prepared_result(destination, counts)
+    if not destination.is_dir():
+        raise ValueError("The PepInter destination must be a directory")
+    files = [path for path in source.rglob("*") if path.is_file()]
+    files.sort(key=lambda path: (path.relative_to(source).as_posix() == "indexes/split.csv",
+                                 path.relative_to(source).as_posix()))
+    for path in files:
+        target = destination / path.relative_to(source)
+        if not target.resolve().is_relative_to(destination):
+            raise ValueError("An existing PepInter path points outside the dataset directory")
+    written = []
+    with tempfile.TemporaryDirectory(prefix=".pepinter-backup-", dir=destination.parent) as temporary:
+        backups = Path(temporary)
+        try:
+            for path in files:
+                target = destination / path.relative_to(source)
+                if target.is_file() and target.stat().st_size > 0 and not force:
+                    continue
+                backup = None
+                if target.exists():
+                    backup = backups / str(len(written))
+                    shutil.copy2(target, backup)
+                written.append((target, backup))
+                _copy_atomic(path, target)
+        except BaseException:
+            for target, backup in reversed(written):
+                if backup is None:
+                    target.unlink(missing_ok=True)
+                else:
+                    _copy_atomic(backup, target)
+            raise
+    return _prepared_result(destination, counts)
+
+
+def install_prepared_archive(
+    archive: Path, root: Path, *, force: bool = False, archive_name: str | None = None
+) -> dict:
+    """Extract and publish a prepared dataset while leaving its source archive intact."""
+    root = Path(root).resolve()
+    root.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".pepinter-prepare-", dir=root.parent) as temporary:
+        stage = Path(temporary) / "pepinter"
+        safe_extract_archive(Path(archive), stage)
+        if archive_name:
+            shutil.copy2(archive, stage / archive_name)
+        return publish_prepared_dataset(stage, root, force=force)
 
 
 def safe_extract_archive(archive: Path, raw_dir: Path) -> int:
@@ -143,7 +281,14 @@ def prepare(
     if extract:
         if archive is None:
             raise ValueError("An archive path is required for extraction")
+        if is_prepared_archive(Path(archive)):
+            return install_prepared_archive(Path(archive), root)
         safe_extract_archive(Path(archive), root / "raw")
+    elif (root / "indexes" / "split.csv").is_file():
+        _, counts = read_prepared_index(root, require_files=False)
+        if counts != EXPECTED_COUNTS:
+            read_prepared_index(root)
+            return _prepared_result(root, counts)
     full, selected, counts = build_indexes(root)
     if graphs:
         prepare_graphs(root, selected if subset else full)

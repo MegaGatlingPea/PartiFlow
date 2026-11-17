@@ -102,15 +102,16 @@ For a Rosetta-filtered cohort, pass its saved postprocessing directory explicitl
 
 ## PepInter and training
 
-Download training data only when preparing a training run:
+Download the prepared example subset when setting up a training run:
 
 ```bash
-partiflow download pepinter --data-dir train_data/pepinter
-python -m partiflow.training.prepare_data \
-  --archive train_data/pepinter/pepinter.tar.xz --root train_data/pepinter
+partiflow download pepinter
+partiflow check --data-dir train_data/pepinter_subset
 ```
 
-The download saves the raw archive only. Preprocessing defaults to all 171,019 structures, preserving 166,019 train, 3,750 validation, and 1,250 test examples; `valid` maps to `val`. A raw archive does not satisfy the processed-data checks.
+The command downloads and unpacks `pepinter-subset.tar.xz` into `train_data/pepinter_subset/`. It contains 64 original training and 16 original validation samples, with PDBs, processed graphs, and an 80-row `indexes/split.csv`. No test samples or full training dataset are included. The supplied VAE/FM configurations use this root, so no graph preprocessing step is required.
+
+This sorted-ID subset demonstrates the training workflow. It is not representative of the full dataset and cannot reproduce the published models' full training. For another dataset root, use `download --data-dir` and point the training configuration at the same split index and processed graphs.
 
 Use the installed/bundled VAE or FM configuration, adjusting data paths, hardware, run name, and output location for the requested run:
 

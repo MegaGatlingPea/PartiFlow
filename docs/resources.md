@@ -98,19 +98,27 @@ cp "$PARTIFLOW_RESOURCES/pdbs/design/klk2/klk2_motif.pdb" inputs/klk2.pdb
 
 ## Prepare training data
 
-Download the original PepInter archive from the same Hugging Face repository, then build the atom37 graphs:
+The public PepInter download is a prepared example subset: **64 training and 16 validation samples**, preserving their original split assignments. It includes the PDB structures, atom37 graphs, and an index containing only those 80 samples. No test samples are included.
 
 ```bash
-partiflow download pepinter --data-dir train_data/pepinter
-python -m partiflow.training.prepare_data \
-  --archive train_data/pepinter/pepinter.tar.xz --root train_data/pepinter
-partiflow check --data-dir train_data/pepinter
+partiflow download pepinter
+partiflow check --data-dir train_data/pepinter_subset
 ```
 
-`download pepinter` saves only the raw archive. It does not extract structures or start preprocessing. The archive contains 166,019 training, 3,750 validation, and 1,250 test structures. Preprocessing preserves those splits and maps `valid` to the internal `val` name. Without `--subset`, it builds graphs for all 171,019 structures. The regular training configs use the full split index and need all indexed graphs.
+The command downloads and unpacks `pepinter-subset.tar.xz` under `train_data/pepinter_subset/`. The supplied VAE and flow-matching configurations use this directory. Graph preprocessing is already complete, so you can continue with the [training commands](commands/train.md).
 
-The downloaded archive alone is not a prepared training dataset. The data-path check requires `indexes/split.csv` and nonempty `processed/` contents; inspect preprocessing failures before starting training. For an already extracted `train_data/pepinter/raw/` tree, replace `--archive ...` with `--skip-extract`.
+```text
+train_data/pepinter_subset/
+  pepinter-subset.tar.xz
+  raw/train/
+  raw/valid/
+  processed/train/
+  processed/val/
+  indexes/split.csv
+```
 
-`--data-dir` selects the dataset root and places the archive at `DATA_DIR/pepinter.tar.xz`. `--config` on `download` and `check` composes the training YAML, including Hydra defaults, and uses its resolved data paths to locate the dataset root. A top-level `data_dir` takes precedence over the datamodule paths; explicit `--data-dir` overrides both. Point the training config at the same `indexes/` and `processed/` directories. Confirm the split fields and preprocessing settings before [training](commands/train.md).
+The subset was selected by sorted sample ID for training examples. It is not a representative sample of the full dataset and cannot reproduce the published models' full training. The full training dataset is not distributed here.
+
+Use `--data-dir` to choose another destination. `--config` on `download` and `check` composes a training YAML, including Hydra defaults, and uses its resolved data paths. A top-level `data_dir` takes precedence over the datamodule paths; explicit `--data-dir` overrides both. Point the training configuration at the same `indexes/split.csv` and `processed/` directories.
 
 In training configurations, relative pretrained checkpoint and autoencoder paths use the model root. Other relative paths in a bundled config use the checkout root for source installations and the invocation directory for wheel installations. Other relative paths in a user training config use that config file's directory.
